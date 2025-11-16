@@ -8,19 +8,25 @@ import java.io.File;
 
 public class Preprocess {
     public static void main(String[] args) {
-        String inputFilePath = "data/covid.csv";
-        String arffOutputFilePath = "data/covid_cleaned.arff";
-        String csvOutputFilePath = "data/covid_cleaned.csv";
+        preprocessAndExport("covid");
+        preprocessAndExport("comorbidity");
+        preprocessAndExport("symptoms");
+    }
+
+    private static void preprocessAndExport(String name) {
+        String inputFilePath = "data/" + name + ".csv";
+        String arffOutputFilePath = "data/" + name + "_cleaned.arff";
+        String csvOutputFilePath = "data/" + name + "_cleaned.csv";
 
         Cleaner cleaner = new Cleaner();
         Instances data = loadData(inputFilePath);
         
         if (data != null) {
-            Instances cleaned_data = cleaner.preprocess(data);
-            System.out.println("Preprocess successfully");
+            Instances cleaned_data = cleaner.preprocess(data, name);
+            System.out.println("Preprocess " + name + ".csv successfully");
             if (cleaned_data != null) {
                 saveData(cleaned_data, arffOutputFilePath, csvOutputFilePath);
-                System.out.println("Saved successfully");
+                System.out.println("Saved " + name + " files successfully");
             }
         }
     }
