@@ -7,6 +7,7 @@ import weka.filters.Filter;
 import weka.filters.unsupervised.attribute.Remove;
 import weka.filters.unsupervised.instance.RemoveWithValues;
 import weka.filters.unsupervised.attribute.ReplaceMissingValues;
+import weka.filters.unsupervised.attribute.NumericToNominal;
 
 import java.util.ArrayList;
 
@@ -56,8 +57,10 @@ public class Cleaner {
         // Remove unnessary columns (CLASIFFICATION_FINAL and DATE_DIED)
         Remove filterRemoveColumns = new Remove();
         
-        int classificationIndex = data.attribute("CLASIFFICATION_FINAL").index() + 1; // Weka index
-        dateDiedIndex++; // Weka index
+        // Instnaces in weka has based-0 index
+        // But filter in weka use based-1 index -> need to plus 1
+        int classificationIndex = data.attribute("CLASIFFICATION_FINAL").index() + 1;
+        dateDiedIndex = data.attribute("DATE_DIED").index() + 1;
 
         filterRemoveColumns.setAttributeIndices(classificationIndex + "," + dateDiedIndex);
         
@@ -75,19 +78,53 @@ public class Cleaner {
 
         for (Instance instance : data) {
             for (int i = 0; i < instance.numAttributes(); i++) {
-                // Change binary values from (1,2) to (0,1)
-                if (data.attribute(i).isNumeric())
-                    if (instance.value(i) == 2.0)
+                Attribute attribute = data.attribute(i);
+                
+                if (attribute.isNumeric()) {
+                    double currentValue = instance.value(i);
+
+                    // Since the value is (1, 2, 97, 99) -> Weka will treat this as numeric
+                    if (currentValue == 97.0 || currentValue == 99.0)
+                        instance.setMissing(i);
+                    // Change (1, 2) binary set to (0, 1)
+                    else if (currentValue == 2.0) 
                         instance.setValue(i, 0);
-                    
-                // Set missing value
-                if (data.attribute(i).isNominal() && (instance.value(i) == 97 || instance.value(i) == 99)) 
-                    instance.setMissing(i);
+                }
             }
 
             // Set PREGNANT to 0 when SEX is 0 (male)
             if (instance.value(sexIndex) == 0.0 && instance.isMissing(pregnantIndex))
                 instance.setValue(pregnantIndex, 0);
+        }
+
+        NumericToNominal converter = new NumericToNominal();
+        StringBuilder colsToConvert = new StringBuilder();
+
+        for (int i = 0; i < data.numAttributes(); i++) {
+            Attribute attribute = data.attribute(i);
+
+            // If it is numeric and not AGE
+            // Result: 1,2,3,... (set of indexes to put in to the filter)
+            if (attribute.isNumeric() && !attribute.name().equalsIgnoreCase("AGE")) {
+                if (colsToConvert.length() > 0) 
+                    colsToConvert.append(",");
+
+                // Based-1 index of filter
+                colsToConvert.append(i + 1);
+            }
+        }
+
+        // Change from numeric to nominal after changing to (0,1) and setting missing
+        if (colsToConvert.length() > 0) {
+            try {
+                converter.setAttributeIndices(colsToConvert.toString());
+                converter.setInputFormat(data);
+                data = Filter.useFilter(data, converter);
+            } catch (Exception e) {
+                System.err.println("Error when change from numeric to nominal");
+                e.printStackTrace();
+                return null;
+            }
         }
 
         // Find the need to be filled columns
@@ -138,7 +175,6 @@ public class Cleaner {
                     double groupValue = inst.value(bestAttr);
                     Double modeForGroup = groupModes.get(groupValue);
 
-                    // Nếu có mode cho nhóm này, điền vào
                     if (modeForGroup != null) {
                         inst.setValue(targetAttr, modeForGroup);
                         imputedCount++;
@@ -217,10 +253,10 @@ public class Cleaner {
                 double chiSquareScore = 0.0;
                 for (int r = 0; r < numCurrentAttrValues; r++) {
                     for (int c = 0; c < numTargetValues; c++) {
-                        // Tính tần số kỳ vọng (Expected Frequency)
+                        // Calculate Expected Frequency
                         double expected = (rowTotals[r] * colTotals[c]) / validInstancesCount;
 
-                        // Tránh chia cho 0. Nếu kỳ vọng là 0, đóng góp vào tổng là 0.
+                        // Avoid dividing by 0
                         if (expected > 0) {
                             double observed = contingencyTable[r][c];
                             double difference = observed - expected;
