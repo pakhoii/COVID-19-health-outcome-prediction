@@ -19,6 +19,17 @@ public class Cleaner {
     }
 
     protected Instances preprocess(Instances data, String name) {
+        // Dealing with BOM csv file, remove the prefix \uFEFF
+        for (int i = 0; i < data.numAttributes(); i++) {
+            Attribute attribute = data.attribute(i);
+            String originalName = attribute.name();
+
+            if (originalName.startsWith("\uFEFF")) {
+                String newName = originalName.substring(1);
+                data.renameAttribute(attribute, newName);
+            }
+        }
+
         return switch (name.toLowerCase()) {
             case "covid" -> preprocessCovid(data);
             case "comorbidity" -> preprocessComorbidity(data);
@@ -31,16 +42,6 @@ public class Cleaner {
     }
 
     private Instances preprocessCovid(Instances data) {
-        // Dealing with BOM csv file, remove the prefix \uFEFF
-        for (int i = 0; i < data.numAttributes(); i++) {
-            Attribute attribute = data.attribute(i);
-            String originalName = attribute.name();
-
-            if (originalName.startsWith("\uFEFF")) {
-                String newName = originalName.substring(1);
-                data.renameAttribute(attribute, newName);
-            }
-        }
 
         // Remove patients who negative with COVID
         RemoveWithValues filterRemoveNonCovid = new RemoveWithValues();
