@@ -66,9 +66,15 @@ This is a large, complex dataset requiring multiple cleaning steps.
 <summary>Click to see unique values after preprocessing</summary>
 
 -   **USMER** (2 unique): `[0, 1]`
+  - `0`: patient treated medical units of the first level
+  - `1`: patient treated medical units of the second level
 -   **MEDICAL_UNIT** (13 unique): `[1, 0, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]`
 -   **SEX** (2 unique): `[1, 0]`
+  - `0`: Male
+  - `1`: Female
 -   **PATIENT_TYPE** (2 unique): `[1, 0]`
+  - `1`: Hospitalized
+  - `0`: Home
 -   **INTUBED** (2 unique): `[0, 1]`
 -   **PNEUMONIA** (2 unique): `[1, 0]`
 -   **AGE** (117 unique): `[0, 1 ,3->96, 100->121]`
@@ -77,14 +83,14 @@ This is a large, complex dataset requiring multiple cleaning steps.
 -   **COPD** (2 unique): `[0, 1]`
 -   **ASTHMA** (2 unique): `[0, 1]`
 -   **INMSUPR** (2 unique): `[0, 1]`
--   **HIPERTENSION** (2 unique): `[1, 0]`
+-   **HIPERTENSION** (2 unique): `[0, 1]`
 -   **OTHER_DISEASE** (2 unique): `[0, 1]`
 -   **CARDIOVASCULAR** (2 unique): `[0, 1]`
 -   **OBESITY** (2 unique): `[0, 1]`
 -   **RENAL_CHRONIC** (2 unique): `[0, 1]`
 -   **TOBACCO** (2 unique): `[0, 1]`
 -   **ICU** (2 unique): `[0, 1]`
--   **DIED** (2 unique): `[1, 0]`
+-   **DIED** (2 unique): `[0, 1]`
 -   **AGE_GROUP** (6 unique): `['0-17', '18-39', '40-49', '50-59', '60-69', '70+']`
 
 </details>
