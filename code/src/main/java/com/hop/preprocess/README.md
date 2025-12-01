@@ -71,7 +71,7 @@ This is a large, complex dataset requiring multiple cleaning steps.
 -   **PATIENT_TYPE** (2 unique): `[1, 0]`
 -   **INTUBED** (2 unique): `[0, 1]`
 -   **PNEUMONIA** (2 unique): `[1, 0]`
--   **AGE** (118 unique): `[65.0, 72.0, 55.0, ...]`
+-   **AGE** (117 unique): `[0, 1 ,3->96, 100->121]`
 -   **PREGNANT** (2 unique): `[0, 1]`
 -   **DIABETES** (2 unique): `[0, 1]`
 -   **COPD** (2 unique): `[0, 1]`
@@ -85,6 +85,7 @@ This is a large, complex dataset requiring multiple cleaning steps.
 -   **TOBACCO** (2 unique): `[0, 1]`
 -   **ICU** (2 unique): `[0, 1]`
 -   **DIED** (2 unique): `[1, 0]`
+-   **AGE_GROUP** (6 unique): `['0-17', '18-39', '40-49', '50-59', '60-69', '70+']`
 
 </details>
 

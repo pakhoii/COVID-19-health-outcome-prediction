@@ -1,8 +1,7 @@
 package com.hop.preprocess;
 
-import weka.core.Instances;
-import weka.core.Instance;
-import weka.core.Attribute;
+import weka.core.*;
+
 import weka.filters.Filter;
 import weka.filters.unsupervised.attribute.Remove;
 import weka.filters.unsupervised.instance.RemoveWithValues;
@@ -12,11 +11,10 @@ import static com.hop.preprocess.Utils.chiSquareTest;
 import static com.hop.preprocess.Utils.calculateMode;
 import static com.hop.preprocess.Utils.numericToNominal;
 
-import java.util.ArrayList;
+import java.util.*;
 
 public class Cleaner {
-    public Cleaner() {
-    }
+    public Cleaner() {}
 
     protected Instances preprocess(Instances data, String name) {
         // Dealing with BOM csv file, remove the prefix \uFEFF
@@ -42,7 +40,6 @@ public class Cleaner {
     }
 
     private Instances preprocessCovid(Instances data) {
-
         // Remove patients who negative with COVID
         RemoveWithValues filterRemoveNonCovid = new RemoveWithValues();
         filterRemoveNonCovid.setAttributeIndex(
@@ -82,10 +79,10 @@ public class Cleaner {
                 instance.setValue(diedIndex, "1");
         }
 
-        // Remove unnessary columns (CLASIFFICATION_FINAL and DATE_DIED)
+        // Remove unnecessary columns (CLASSIFICATION_FINAL and DATE_DIED)
         Remove filterRemoveColumns = new Remove();
 
-        // Instnaces in weka has based-0 index
+        // Instances in weka has based-0 index
         // But filter in weka use based-1 index -> need to plus 1
         int classificationIndex = data.attribute("CLASIFFICATION_FINAL").index() + 1;
         dateDiedIndex = data.attribute("DATE_DIED").index() + 1;
@@ -125,6 +122,69 @@ public class Cleaner {
                 instance.setValue(pregnantIndex, 0);
         }
 
+        // Round AGE to nearest integer
+        int ageIndex = data.attribute("AGE").index();
+        for (Instance inst : data) {
+            if (!inst.isMissing(ageIndex)) {
+                inst.setValue(ageIndex, Math.round(inst.value(ageIndex)));
+            }
+        }
+
+        // Round INTUBED to nearest integer
+        int intubedIndex = data.attribute("INTUBED").index();
+        for (Instance inst : data) {
+            if (!inst.isMissing(intubedIndex)) {
+                inst.setValue(intubedIndex, Math.round(inst.value(intubedIndex)));
+            }
+        }
+
+        // Round PNEUMONIA to nearest integer
+        int pneumoniaIndex = data.attribute("PNEUMONIA").index();
+        for (Instance inst : data) {
+            if (!inst.isMissing(pneumoniaIndex)) {
+                inst.setValue(pneumoniaIndex, Math.round(inst.value(pneumoniaIndex)));
+            }
+        }
+
+        
+
+        // Set AGE_GROUP AGE_GROUP nominal attribute based on AGE
+        /* Revised AGE_GROUP:
+        - 0-17 (Pediatric)
+        - 18-39 (Young Adult - Low Risk)
+        - 40-49 (Adult - Moderate Risk)
+        - 50-59 (Late Adult - High Risk)
+        - 60-69 (Senior - Very High Risk)
+        - 70+ (Elderly - Critical Risk)
+         */
+        List<String> ageGroups = new ArrayList<>();
+        ageGroups.add("0-17");
+        ageGroups.add("18-39");
+        ageGroups.add("40-49");
+        ageGroups.add("50-59");
+        ageGroups.add("60-69");
+        ageGroups.add("70+");
+
+        Attribute ageGroupAttr = new Attribute("AGE_GROUP", ageGroups);
+
+        data.insertAttributeAt(ageGroupAttr, data.numAttributes());
+
+        int ageGroupIndex = data.attribute("AGE_GROUP").index();
+        for (Instance inst : data) {
+            if (inst.isMissing(ageIndex)) {
+                inst.setMissing(ageGroupIndex);
+                continue;
+            }
+            double age = inst.value(ageIndex);
+
+            if (age <= 17) inst.setValue(ageGroupIndex, ageGroups.get(0));
+            else if (age <= 39) inst.setValue(ageGroupIndex, ageGroups.get(1));
+            else if (age <= 49) inst.setValue(ageGroupIndex, ageGroups.get(2));
+            else if (age <= 59) inst.setValue(ageGroupIndex, ageGroups.get(3));
+            else if (age <= 69) inst.setValue(ageGroupIndex, ageGroups.get(4));
+            else inst.setValue(ageGroupIndex, ageGroups.get(5));
+        }
+
         data = numericToNominal(data);
 
         // Find the need to be filled columns
@@ -148,7 +208,7 @@ public class Cleaner {
             // Using HashMap to store the mode for each value of bestAttr
             // Key: value of bestAttr (as Double)
             // Value: mode of targetAttr in that group (as Double)
-            java.util.Map<Double, Double> groupModes = new java.util.HashMap<>();
+            Map<Double, Double> groupModes = new HashMap<>();
 
             // Loop through all possible values of bestAttr to create groups
             for (int j = 0; j < bestAttr.numValues(); j++) {
@@ -168,7 +228,7 @@ public class Cleaner {
             }
 
             // Fill missing values using the calculated mode for each group
-            int imputedCount = 0;
+
             for (Instance inst : data) {
                 // If targetAttr is missing and bestAttr is not missing
                 if (inst.isMissing(targetAttr) && !inst.isMissing(bestAttr)) {
@@ -177,10 +237,10 @@ public class Cleaner {
 
                     if (modeForGroup != null) {
                         inst.setValue(targetAttr, modeForGroup);
-                        imputedCount++;
                     }
                 }
             }
+
         }
 
         // Handle any remaining missing values (if any) using global replacement

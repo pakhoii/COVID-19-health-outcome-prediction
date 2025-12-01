@@ -9,8 +9,8 @@ import java.io.File;
 public class Preprocess {
     public static void main(String[] args) {
         preprocessAndExport("covid");
-        preprocessAndExport("comorbidity");
-        preprocessAndExport("symptoms");
+//        preprocessAndExport("comorbidity");
+//        preprocessAndExport("symptoms");
     }
 
     private static void preprocessAndExport(String name) {
