@@ -17,8 +17,8 @@ public class Utils {
 
             // If it is numeric and not AGE
             // Result: 1,2,3,... (set of indexes to put in to the filter)
-            if (attribute.isNumeric() && attribute.name().equals("AGE")) {
-                if (!colsToConvert.isEmpty())
+            if (attribute.isNumeric() && !attribute.name().equalsIgnoreCase("AGE")) {
+                if (colsToConvert.length() > 0)
                     colsToConvert.append(",");
 
                 // Based-1 index of filter
@@ -27,7 +27,7 @@ public class Utils {
         }
 
         // Change from numeric to nominal after changing to (0,1) and setting missing
-        if (!colsToConvert.isEmpty()) {
+        if (colsToConvert.length() > 0) {
             try {
                 converter.setAttributeIndices(colsToConvert.toString());
                 converter.setInputFormat(data);

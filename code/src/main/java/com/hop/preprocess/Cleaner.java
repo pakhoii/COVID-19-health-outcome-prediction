@@ -122,32 +122,6 @@ public class Cleaner {
                 instance.setValue(pregnantIndex, 0);
         }
 
-        // Round AGE to nearest integer
-        int ageIndex = data.attribute("AGE").index();
-        for (Instance inst : data) {
-            if (!inst.isMissing(ageIndex)) {
-                inst.setValue(ageIndex, Math.round(inst.value(ageIndex)));
-            }
-        }
-
-        // Round INTUBED to nearest integer
-        int intubedIndex = data.attribute("INTUBED").index();
-        for (Instance inst : data) {
-            if (!inst.isMissing(intubedIndex)) {
-                inst.setValue(intubedIndex, Math.round(inst.value(intubedIndex)));
-            }
-        }
-
-        // Round PNEUMONIA to nearest integer
-        int pneumoniaIndex = data.attribute("PNEUMONIA").index();
-        for (Instance inst : data) {
-            if (!inst.isMissing(pneumoniaIndex)) {
-                inst.setValue(pneumoniaIndex, Math.round(inst.value(pneumoniaIndex)));
-            }
-        }
-
-        
-
         // Set AGE_GROUP AGE_GROUP nominal attribute based on AGE
         /* Revised AGE_GROUP:
         - 0-17 (Pediatric)
@@ -170,6 +144,8 @@ public class Cleaner {
         data.insertAttributeAt(ageGroupAttr, data.numAttributes());
 
         int ageGroupIndex = data.attribute("AGE_GROUP").index();
+        int ageIndex = data.attribute("AGE").index();
+
         for (Instance inst : data) {
             if (inst.isMissing(ageIndex)) {
                 inst.setMissing(ageGroupIndex);
