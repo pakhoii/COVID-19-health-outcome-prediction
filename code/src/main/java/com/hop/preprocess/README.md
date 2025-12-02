@@ -58,7 +58,15 @@ This is a large, complex dataset requiring multiple cleaning steps.
         $$X^2=\sum{\frac{(\text{Observed}-\text{Expected})^2}{\text{Expected}}}$$
     -   The data is then grouped by the values of this most correlated column.
     -   Missing values are imputed using the **mode** (most frequent value) of each respective group. Any remaining missing values are filled using a global mode.
-1.  **Finalize and Export:** The fully cleaned `Instances` object is returned and saved.
+7. **Create Age Groups:** A new nominal feature `AGE_GROUP` is created by binning the `AGE` attribute into the following categories:
+   - `0-17` (Pediatric)
+   - `18-39` (Young Adult - Low Risk)
+   - `40-49` (Adult - Moderate Risk)
+   - `50-59` (Late Adult - High Risk)
+   - `60-69` (Senior - Very High Risk)
+   - `70+` (Elderly - Critical Risk)
+8. 
+7. **Finalize and Export:** The fully cleaned `Instances` object is returned and saved.
 
 #### **Final Data Profile:**
 
@@ -73,8 +81,8 @@ This is a large, complex dataset requiring multiple cleaning steps.
   - `0`: Male
   - `1`: Female
 -   **PATIENT_TYPE** (2 unique): `[1, 0]`
-  - `1`: Hospitalized
-  - `0`: Home
+  - `1`: Home
+  - `0`: Hospitalized
 -   **INTUBED** (2 unique): `[0, 1]`
 -   **PNEUMONIA** (2 unique): `[1, 0]`
 -   **AGE** (117 unique): `[0, 1 ,3->96, 100->121]`

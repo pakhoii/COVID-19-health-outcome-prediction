@@ -161,6 +161,44 @@ public class Cleaner {
             else inst.setValue(ageGroupIndex, ageGroups.get(5));
         }
 
+        // Create SEVERITY_INDEX nominal attribute
+        List<String> severityLevels = new ArrayList<>();
+        severityLevels.add("0"); // Low (Recovering at home)
+        severityLevels.add("1"); // Moderate (Hospitalized but stable)
+        severityLevels.add("2"); // Severe (ICU but not vented)
+        severityLevels.add("3"); // Critical (Ventilator)
+
+        Attribute severityAttr = new Attribute("SEVERITY_INDEX", severityLevels);
+        data.insertAttributeAt(severityAttr, data.numAttributes());
+
+        int severityIndex = data.attribute("SEVERITY_INDEX").index();
+        int intubedIndex = data.attribute("INTUBED").index();
+        int icuIndex = data.attribute("ICU").index();
+        int patientTypeIndex = data.attribute("PATIENT_TYPE").index();
+
+        for (Instance inst : data) {
+            // Handle missing values - set SEVERITY_INDEX to missing if key attributes are missing
+            if (inst.isMissing(intubedIndex) || inst.isMissing(icuIndex) || inst.isMissing(patientTypeIndex)) {
+                inst.setMissing(severityIndex);
+                continue;
+            }
+
+            double intubed = inst.value(intubedIndex);
+            double icu = inst.value(icuIndex);
+            double patientType = inst.value(patientTypeIndex);
+
+            if (intubed == 1.0) {
+                inst.setValue(severityIndex, "3"); // Critical
+            } else if (icu == 1.0) {
+                inst.setValue(severityIndex, "2"); // Severe
+            } else if (patientType == 0.0) {
+                inst.setValue(severityIndex, "1"); // Moderate
+            } else {
+                inst.setValue(severityIndex, "0"); // Low
+            }
+        }
+
+
         data = numericToNominal(data);
 
         // Find the need to be filled columns
