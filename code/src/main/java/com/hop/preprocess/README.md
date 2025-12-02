@@ -3,7 +3,7 @@
 
 ## 1. Description
 
-This module is responsible for preprocessing the raw datasets located in the `/data` directory. The primary goal is to clean, standardize, and transform the data into a usable format for analysis and model training. The final cleaned datasets are then exported in both `.csv` (for general use) and `.arff` (for Weka) formats.
+This module is responsible for preprocessing the raw datasets located in the `/data` directory. The primary goal is to clean, standardize, and transform the data into a usable format for analysis and model training. The final cleaned datasets are then exported in both `.csv` (for general use) and `.arff` (for Weka) formats in the directory `/data/preprocess`.
 
 **Task Owner:** Pham Anh Khoi
 

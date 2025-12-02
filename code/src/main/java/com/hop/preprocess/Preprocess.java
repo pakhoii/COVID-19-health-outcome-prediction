@@ -14,9 +14,9 @@ public class Preprocess {
     }
 
     private static void preprocessAndExport(String name) {
-        String inputFilePath = "data/" + name + ".csv";
-        String arffOutputFilePath = "data/" + name + "_cleaned.arff";
-        String csvOutputFilePath = "data/" + name + "_cleaned.csv";
+        String inputFilePath = "data/raw/" + name + ".csv";
+        String arffOutputFilePath = "data/preprocess/" + name + "_cleaned.arff";
+        String csvOutputFilePath = "data/preprocess/" + name + "_cleaned.csv";
 
         Cleaner cleaner = new Cleaner();
         Instances data = loadData(inputFilePath);
