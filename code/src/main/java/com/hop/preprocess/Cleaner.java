@@ -124,20 +124,20 @@ public class Cleaner {
 
         // Set AGE_GROUP AGE_GROUP nominal attribute based on AGE
         /* Revised AGE_GROUP:
-        - 0-17 (Pediatric)
-        - 18-39 (Young Adult - Low Risk)
-        - 40-49 (Adult - Moderate Risk)
-        - 50-59 (Late Adult - High Risk)
-        - 60-69 (Senior - Very High Risk)
-        - 70+ (Elderly - Critical Risk)
+        - 0: 0-17 (Pediatric)
+        - 1: 18-39 (Young Adult - Low Risk)
+        - 2: 40-49 (Adult - Moderate Risk)
+        - 3: 50-59 (Late Adult - High Risk)
+        - 4: 60-69 (Senior - Very High Risk)
+        - 5: 70+ (Elderly - Critical Risk)
          */
         List<String> ageGroups = new ArrayList<>();
-        ageGroups.add("0-17");
-        ageGroups.add("18-39");
-        ageGroups.add("40-49");
-        ageGroups.add("50-59");
-        ageGroups.add("60-69");
-        ageGroups.add("70+");
+        ageGroups.add("0");
+        ageGroups.add("1");
+        ageGroups.add("2");
+        ageGroups.add("3");
+        ageGroups.add("4");
+        ageGroups.add("5");
 
         Attribute ageGroupAttr = new Attribute("AGE_GROUP", ageGroups);
 
@@ -177,24 +177,18 @@ public class Cleaner {
         int patientTypeIndex = data.attribute("PATIENT_TYPE").index();
 
         for (Instance inst : data) {
-            // Handle missing values - set SEVERITY_INDEX to missing if key attributes are missing
-            if (inst.isMissing(intubedIndex) || inst.isMissing(icuIndex) || inst.isMissing(patientTypeIndex)) {
-                inst.setMissing(severityIndex);
-                continue;
-            }
+            boolean intubedIs1 = !inst.isMissing(intubedIndex) && inst.value(intubedIndex) == 1.0;
+            boolean icuIs1 = !inst.isMissing(icuIndex) && inst.value(icuIndex) == 1.0;
+            boolean patientTypeIs0 = !inst.isMissing(patientTypeIndex) && inst.value(patientTypeIndex) == 0.0;
 
-            double intubed = inst.value(intubedIndex);
-            double icu = inst.value(icuIndex);
-            double patientType = inst.value(patientTypeIndex);
-
-            if (intubed == 1.0) {
+            if (intubedIs1) {
                 inst.setValue(severityIndex, "3"); // Critical
-            } else if (icu == 1.0) {
+            } else if (icuIs1) {
                 inst.setValue(severityIndex, "2"); // Severe
-            } else if (patientType == 0.0) {
+            } else if (patientTypeIs0) {
                 inst.setValue(severityIndex, "1"); // Moderate
             } else {
-                inst.setValue(severityIndex, "0"); // Low
+                inst.setValue(severityIndex, "0"); // Low (home) - matches pandas behavior
             }
         }
 
