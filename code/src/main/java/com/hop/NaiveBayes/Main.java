@@ -3,7 +3,7 @@ package com.hop.NaiveBayes;
 import weka.classifiers.bayes.NaiveBayes;
 import weka.classifiers.Evaluation;
 import weka.core.Instances;
-import weka.core.converters.CSVLoader;
+import weka.core.converters.ArffLoader;
 import weka.filters.Filter;
 import weka.filters.unsupervised.attribute.NumericToNominal;
 
@@ -12,23 +12,28 @@ import java.util.ArrayList;
 import java.util.Random;
 
 public class Main {
+    final static String trainCSV = "data/naive_bayes/stage1_train.csv";
+    final static String testCSV  = "data/naive_bayes/stage1_test.csv";
+    final static String trainARFF = "data/naive_bayes/stage1_train.arff";
+    final static String testARFF  = "data/naive_bayes/stage1_test.arff";
+    static int seed = 42;
 
     public static void main(String[] args) throws Exception {
-        String trainCsv = args.length > 0 ? args[0] : "data/naive_bayes/stage1_train.csv";
-        String testCsv  = args.length > 1 ? args[1] : "data/naive_bayes/stage1_test.csv";
-        int seed = 42;
+        NaiveBayesStage1(trainARFF, testARFF);
+    }
 
+    private static void NaiveBayesStage1(String trainPath, String testPath) throws Exception {
         // Load CSVs
-        CSVLoader loader = new CSVLoader();
-        loader.setSource(new File(trainCsv));
+        ArffLoader loader = new ArffLoader();
+        loader.setSource(new File(trainPath));
         Instances train = loader.getDataSet();
 
-        loader = new CSVLoader();
-        loader.setSource(new File(testCsv));
+        loader = new ArffLoader();
+        loader.setSource(new File(testPath));
         Instances test = loader.getDataSet();
 
         if (train.numAttributes() == 0 || test.numAttributes() == 0) {
-            throw new IllegalArgumentException("Empty dataset(s). Check CSV paths: `"+trainCsv+"`, `"+testCsv+"`.");
+            throw new IllegalArgumentException("Empty dataset(s). Check CSV paths: `"+trainPath+"`, `"+testPath+"`.");
         }
 
         // Set class index to last attribute (expects DIED to be last in the CSV)
@@ -106,5 +111,7 @@ public class Main {
         // Optional: reproducibility seed used for any random operations (not needed here but kept)
         Random r = new Random(seed);
     }
+
+
 }
 

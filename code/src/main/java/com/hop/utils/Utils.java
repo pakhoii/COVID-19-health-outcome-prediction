@@ -5,6 +5,7 @@ import weka.core.Instance;
 import weka.core.Instances;
 import weka.core.converters.ArffSaver;
 import weka.core.converters.CSVSaver;
+import weka.core.converters.ConverterUtils;
 import weka.filters.Filter;
 import weka.filters.unsupervised.attribute.NumericToNominal;
 
@@ -13,9 +14,9 @@ import java.io.File;
 public class Utils {
 
     // Convert numeric attributes to nominal except AGE
-    /*
-    @param data  The dataset containing the attributes
-    @return      The dataset with numeric attributes converted to nominal (except AGE)
+    /**
+    @param data  The dataset containing numeric attributes
+    @return      The dataset with specified numeric attributes converted to nominal
      */
     public static Instances numericToNominal(Instances data) {
         NumericToNominal converter = new NumericToNominal();
@@ -52,7 +53,7 @@ public class Utils {
     }
 
     // Perform Chi-Squared test to select the best attribute
-    /*
+    /**
     @param data      The dataset containing the attributes
     @param target    The target nominal attribute
     @return          The attribute with the highest Chi-Squared score
@@ -142,7 +143,7 @@ public class Utils {
     }
 
     // Calculate mode for a nominal attribute
-    /*
+    /**
     @param dataset   The dataset containing the attribute
     @param attribute The nominal attribute for which to calculate the mode
     @return          The index of the mode value, or -1 if dataset is empty or
@@ -172,7 +173,7 @@ public class Utils {
     }
 
     // Save Instances to CSV
-    /*
+    /**
     @param data      The Instances data to save
     @param outPath   The output file path for the CSV
     @throws Exception If an error occurs during saving
@@ -191,7 +192,7 @@ public class Utils {
     }
 
     // Save Instances to ARFF
-    /*
+    /**
     @param data      The Instances data to save
     @param outPath   The output file path for the ARFF
     @throws Exception If an error occurs during saving
@@ -209,4 +210,20 @@ public class Utils {
         }
     }
 
+    // Load data from CSV file
+
+    /**
+     * Load data from a CSV file.
+     * @param inputFilePath The path to the input CSV file
+     * @return Instances object containing the dataset
+     */
+    public static Instances loadData(String inputFilePath) {
+        try {
+            ConverterUtils.DataSource source = new ConverterUtils.DataSource(inputFilePath);
+            return source.getDataSet();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
 }

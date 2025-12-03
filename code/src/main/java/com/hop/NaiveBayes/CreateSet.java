@@ -1,9 +1,8 @@
 package com.hop.NaiveBayes;
 
 import weka.core.Instances;
-import weka.core.converters.ArffSaver;
+import weka.core.converters.ArffLoader;
 import weka.core.converters.CSVLoader;
-import weka.core.converters.CSVSaver;
 import weka.filters.Filter;
 import weka.filters.supervised.instance.StratifiedRemoveFolds;
 import weka.filters.unsupervised.attribute.NumericToNominal;
@@ -12,21 +11,46 @@ import weka.filters.unsupervised.attribute.Remove;
 import java.io.File;
 import java.util.Random;
 
+import static com.hop.utils.Utils.saveARFF;
+import static com.hop.utils.Utils.saveCSV;
+
 public class CreateSet {
+    static int seed = 42;
+    final static String CSV = ".csv";
+    final static String ARFF = ".arff";
+    static String inputCSV = "data/preprocess/covid_cleaned" + CSV;
+    static String inputARFF = "data/preprocess/covid_cleaned" + ARFF;
+
+    static String outputTrainCSV = "data/naive_bayes/stage1_train" + CSV;
+    static String outputTestCSV = "data/naive_bayes/stage1_test" + CSV;
+    static String outputTrainARFF = "data/naive_bayes/stage1_train" + ARFF;
+    static String outputTestARFF = "data/naive_bayes/stage1_test" + ARFF;
 
     public static void main(String[] args) throws Exception {
-        String inputCsv = args.length > 0 ? args[0] : "data/preprocess/covid_cleaned.csv";
-        String outTrainCsvPath = args.length > 1 ? args[1] : "data/naive_bayes/stage1_train.csv";
-        String outTestCsvPath = args.length > 2 ? args[2] : "data/naive_bayes/stage1_test.csv";
-        String outTrainArffPath = args.length > 3 ? args[3] : "data/naive_bayes/stage1_train.arff";
-        String outTestArffPath = args.length > 4 ? args[4] : "data/naive_bayes/stage1_test.arff";
-        int seed = 42;
+        CreateSet cs = new CreateSet();
+        cs.CreateSetNaiveBayesCSV();
+    }
 
+    // Create stage1 train and test sets for Naive Bayes using CSV input
+    private void CreateSetNaiveBayesCSV() throws Exception {
         // Load CSV
-        CSVLoader loader = new CSVLoader();
-        loader.setSource(new File(inputCsv));
-        Instances data = loader.getDataSet();
+        CSVLoader csvLoader = new CSVLoader();
+        csvLoader.setSource(new File(inputCSV));
+        Instances csvData = csvLoader.getDataSet();
 
+        CreateSetNaiveBayes(csvData);
+    }
+
+    // Create stage1 train and test sets for Naive Bayes using ARFF input
+    private void CreateSetNaiveBayesARFF() throws Exception {
+        ArffLoader arffLoader = new ArffLoader();
+        arffLoader.setSource(new File(inputARFF));
+        Instances arffData = arffLoader.getDataSet();
+
+        CreateSetNaiveBayes(arffData);
+    }
+
+    private static void CreateSetNaiveBayes(Instances data) throws Exception {
         // Ensure DIED attribute exists
         int diedIdx = data.attribute("DIED") != null ? data.attribute("DIED").index() : -1;
         if (diedIdx == -1) throw new IllegalArgumentException("DIED attribute not found");
@@ -102,30 +126,17 @@ public class CreateSet {
         testPool = keepOnlyAttributes(testPool, cols);
 
         // Save CSVs
-        CSVSaver saver = new CSVSaver();
-        saver.setInstances(stage1Train);
-        saver.setFile(new File(outTrainCsvPath));
-        saver.writeBatch();
-
-        saver = new CSVSaver();
-        saver.setInstances(testPool);
-        saver.setFile(new File(outTestCsvPath));
-        saver.writeBatch();
+        saveCSV(stage1Train, outputTrainCSV);
+        saveCSV(testPool, outputTestCSV);
 
         System.out.println("Created stage1 train and test sets .csv successfully.");
 
         // Save ARFFs
-        ArffSaver arffSaver = new ArffSaver();
-        arffSaver.setInstances(data);
-        arffSaver.setFile(new File(outTrainArffPath));
-        arffSaver.writeBatch();
-
-        arffSaver = new ArffSaver();
-        arffSaver.setInstances(testPool);
-        arffSaver.setFile(new File(outTestArffPath));
-        arffSaver.writeBatch();
+        saveARFF(stage1Train, outputTrainARFF);
+        saveARFF(testPool, outputTestARFF);
 
         System.out.println("Created stage1 train and test sets .arff successfully.");
+
     }
 
     private static Instances keepOnlyAttributes(Instances data, String[] keepNames) throws Exception {

@@ -1,18 +1,25 @@
 package com.hop.preprocess;
 
 import weka.core.Instances;
-import weka.core.converters.ConverterUtils.DataSource;
 
 import static com.hop.utils.Utils.saveCSV;
 import static com.hop.utils.Utils.saveARFF;
+import static com.hop.utils.Utils.loadData;
 
 
 public class Preprocess {
-    
+
     public static void main(String[] args) throws Exception {
         preprocessAndExport("covid");
     }
 
+    // Preprocess and export to ARFF and CSV
+
+    /**
+     * Preprocess the dataset and export to ARFF and CSV files.
+     * @param name The base name of the dataset (without extension)
+     * @throws Exception if an error occurs during preprocessing or saving
+     */
     private static void preprocessAndExport(String name) throws Exception {
         String inputFilePath = "data/raw/" + name + ".csv";
         String arffOutputFilePath = "data/preprocess/" + name + "_cleaned.arff";
@@ -29,16 +36,6 @@ public class Preprocess {
                 saveCSV(cleaned_data, csvOutputFilePath);
                 System.out.println("Saved " + name + " files successfully");
             }
-        }
-    }
-
-    private static Instances loadData(String inputFilePath) {
-        try {
-            DataSource source = new DataSource(inputFilePath);
-            return source.getDataSet();
-        } catch (Exception e) {
-            e.printStackTrace();
-            return null;
         }
     }
 
