@@ -1,14 +1,23 @@
-package com.hop.preprocess;
+package com.hop.utils;
 
 import weka.core.Attribute;
 import weka.core.Instance;
 import weka.core.Instances;
+import weka.core.converters.ArffSaver;
+import weka.core.converters.CSVSaver;
 import weka.filters.Filter;
 import weka.filters.unsupervised.attribute.NumericToNominal;
 
+import java.io.File;
+
 public class Utils {
 
-    protected static Instances numericToNominal(Instances data) {
+    // Convert numeric attributes to nominal except AGE
+    /*
+    @param data  The dataset containing the attributes
+    @return      The dataset with numeric attributes converted to nominal (except AGE)
+     */
+    public static Instances numericToNominal(Instances data) {
         NumericToNominal converter = new NumericToNominal();
         StringBuilder colsToConvert = new StringBuilder();
 
@@ -42,7 +51,13 @@ public class Utils {
         return data;
     }
 
-    protected static Attribute chiSquareTest(Instances data, Attribute target) {
+    // Perform Chi-Squared test to select the best attribute
+    /*
+    @param data      The dataset containing the attributes
+    @param target    The target nominal attribute
+    @return          The attribute with the highest Chi-Squared score
+     */
+    public static Attribute chiSquareTest(Instances data, Attribute target) {
         // Check for valid input
         if (data == null || !data.checkForAttributeType(Attribute.NOMINAL) ||
                 target == null || !target.isNominal()) {
@@ -126,7 +141,13 @@ public class Utils {
         return bestAttribute;
     }
 
-    protected static double calculateMode(Instances dataset, Attribute attribute) {
+    // Calculate mode for a nominal attribute
+    /*
+    @param dataset   The dataset containing the attribute
+    @param attribute The nominal attribute for which to calculate the mode
+    @return          The index of the mode value, or -1 if dataset is empty or
+     */
+    public static double calculateMode(Instances dataset, Attribute attribute) {
         if (dataset.isEmpty() || !attribute.isNominal()) {
             return -1;
         }
@@ -149,4 +170,43 @@ public class Utils {
 
         return modeIndex;
     }
+
+    // Save Instances to CSV
+    /*
+    @param data      The Instances data to save
+    @param outPath   The output file path for the CSV
+    @throws Exception If an error occurs during saving
+     */
+    public static void saveCSV(Instances data, String outPath) throws Exception {
+        try {
+            CSVSaver saver = new CSVSaver();
+            saver.setInstances(data);
+            saver.setFile(new File(outPath));
+            saver.writeBatch();
+        }
+        catch (Exception e) {
+            System.err.println("Error when saving CSV to " + outPath);
+            throw e;
+        }
+    }
+
+    // Save Instances to ARFF
+    /*
+    @param data      The Instances data to save
+    @param outPath   The output file path for the ARFF
+    @throws Exception If an error occurs during saving
+     */
+    public static void saveARFF(Instances data, String outPath) throws Exception {
+        try {
+            ArffSaver arffSaver = new ArffSaver();
+            arffSaver.setInstances(data);
+            arffSaver.setFile(new File(outPath));
+            arffSaver.writeBatch();
+        }
+        catch (Exception e) {
+            System.err.println("Error when saving ARFF to " + outPath);
+            throw e;
+        }
+    }
+
 }

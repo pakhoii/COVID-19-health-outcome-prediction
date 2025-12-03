@@ -7,9 +7,9 @@ import weka.filters.unsupervised.attribute.Remove;
 import weka.filters.unsupervised.instance.RemoveWithValues;
 import weka.filters.unsupervised.attribute.ReplaceMissingValues;
 
-import static com.hop.preprocess.Utils.chiSquareTest;
-import static com.hop.preprocess.Utils.calculateMode;
-import static com.hop.preprocess.Utils.numericToNominal;
+import static com.hop.utils.Utils.chiSquareTest;
+import static com.hop.utils.Utils.calculateMode;
+import static com.hop.utils.Utils.numericToNominal;
 
 import java.util.*;
 
