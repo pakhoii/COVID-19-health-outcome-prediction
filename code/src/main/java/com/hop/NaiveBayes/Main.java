@@ -5,7 +5,6 @@ import weka.classifiers.Evaluation;
 import weka.core.Instances;
 import weka.filters.Filter;
 import weka.filters.unsupervised.attribute.NumericToNominal;
-import weka.core.converters.ConverterUtils.DataSource;
 
 import java.util.ArrayList;
 import java.util.Random;
@@ -51,6 +50,7 @@ public class Main {
 
         // Build Naive Bayes classifier
         NaiveBayes nb = new NaiveBayes();
+        nb.setUseKernelEstimator(true);  // Match configuration
         nb.buildClassifier(train);
 
         // Evaluate
@@ -58,8 +58,26 @@ public class Main {
         eval.evaluateModel(nb, test);
 
         System.out.printf("\n--- STAGE 1 (NAIVE BAYES) RESULTS ---%n");
+
+        // Collect metrics into lists (single evaluation, so lists contain one value each)
+        ArrayList<Double> accList = new ArrayList<>();
+        ArrayList<Double> recList = new ArrayList<>();
+        ArrayList<Double> precList = new ArrayList<>();
+        ArrayList<Double> f1List = new ArrayList<>();
+
+        accList.add(eval.pctCorrect() / 100.0);
+        recList.add(eval.recall(1));
+        precList.add(eval.precision(1));
+        f1List.add(eval.fMeasure(1));
+
+        // Also print detailed metrics and confusion matrix
+        System.out.println("\n--- Detailed Metrics ---");
         printEvaluationMetrics(eval, test);
         printConfusionMatrix(eval, test);
+        // Use the Weka-style summary printer
+        printWekaStyleSummary(accList, recList, precList, f1List, test);
+
+
 
         int idx1 = test.classAttribute().indexOfValue("1");
         // fallback: if "0"/"1" not present, assume index 0 = cured, 1 = died (order from CSV)
@@ -137,15 +155,7 @@ public class Main {
                     fold + 1, acc, recall, precision, f1);
         }
 
-        System.out.println("------------------------------------------------------------");
-        System.out.println("\n--- FINAL 10-FOLD SUMMARY (STAGE 1) ---");
-        System.out.printf("Mean Accuracy:  %.2f%% (+/- %.2f%%)\n",
-                mean(accScores) * 100, stdev(accScores) * 100);
-        System.out.printf("Mean Recall:    %.2f%% (Target: >90%%)\n",
-                mean(recallScores) * 100);
-        System.out.printf("Mean Precision: %.2f%% (Expected: Low)\n",
-                mean(precisionScores) * 100);
-        System.out.printf("Mean F1-Score:  %.4f\n", mean(f1Scores));
+        printWekaStyleSummary(accScores, recallScores, precisionScores, f1Scores, filteredData);
     }
 
     private static void CrossValidateNaiveBayes(String filePath) throws Exception {
@@ -167,7 +177,7 @@ public class Main {
         // Lists to store metrics per fold
         ArrayList<Double> accScores = new ArrayList<>();
         ArrayList<Double> recallScores = new ArrayList<>();
-        ArrayList<Double> precScores = new ArrayList<>();
+        ArrayList<Double> precisionScores = new ArrayList<>();
         ArrayList<Double> f1Scores = new ArrayList<>();
 
         System.out.println("\nStarting 10-Fold Cross-Validation for Stage 1 (Naive Bayes)...");
@@ -198,22 +208,14 @@ public class Main {
 
             accScores.add(acc);
             recallScores.add(recall);
-            precScores.add(precision);
+            precisionScores.add(precision);
             f1Scores.add(f1);
 
             System.out.printf("%-5d | %.4f     | %.4f     | %.4f     | %.4f\n",
                     fold + 1, acc, recall, precision, f1);
         }
 
-        System.out.println("------------------------------------------------------------");
-        System.out.println("\n--- FINAL 10-FOLD SUMMARY (STAGE 1) ---");
-        System.out.printf("Mean Accuracy:  %.2f%% (+/- %.2f%%)\n",
-                mean(accScores) * 100, stdev(accScores) * 100);
-        System.out.printf("Mean Recall:    %.2f%% (Target: >90%%)\n",
-                mean(recallScores) * 100);
-        System.out.printf("Mean Precision: %.2f%% (Expected: Low)\n",
-                mean(precScores) * 100);
-        System.out.printf("Mean F1-Score:  %.4f\n", mean(f1Scores));
+        printWekaStyleSummary(accScores, recallScores, precisionScores, f1Scores, filteredData);
     }
 
 
