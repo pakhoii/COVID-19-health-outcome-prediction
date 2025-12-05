@@ -4,37 +4,36 @@ import weka.classifiers.bayes.NaiveBayes;
 import weka.classifiers.Evaluation;
 import weka.core.Instances;
 import weka.core.converters.ArffLoader;
+import weka.core.converters.CSVLoader;
 import weka.filters.Filter;
 import weka.filters.unsupervised.attribute.NumericToNominal;
+import weka.core.converters.ConverterUtils.DataSource;
 
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Random;
 
+import static com.hop.utils.Utils.*;
+
+
+import java.util.*;
+
 public class Main {
-    final static String trainCSV = "data/naive_bayes/stage1_train.csv";
-    final static String testCSV  = "data/naive_bayes/stage1_test.csv";
-    final static String trainARFF = "data/naive_bayes/stage1_train.arff";
-    final static String testARFF  = "data/naive_bayes/stage1_test.arff";
-    static int seed = 42;
 
     public static void main(String[] args) throws Exception {
         NaiveBayesStage1(trainARFF, testARFF);
+        CrossValidateNaiveBayesWithUndersampling(dataFullARFF);
+
     }
 
     private static void NaiveBayesStage1(String trainPath, String testPath) throws Exception {
-        // Load CSVs
-        ArffLoader loader = new ArffLoader();
-        loader.setSource(new File(trainPath));
-        Instances train = loader.getDataSet();
+        System.out.println("Loading " + trainPath + "...");
+        DataSource source = new DataSource(trainPath);
+        Instances train = source.getDataSet();
 
-        loader = new ArffLoader();
-        loader.setSource(new File(testPath));
-        Instances test = loader.getDataSet();
-
-        if (train.numAttributes() == 0 || test.numAttributes() == 0) {
-            throw new IllegalArgumentException("Empty dataset(s). Check CSV paths: `"+trainPath+"`, `"+testPath+"`.");
-        }
+        System.out.println("Loading " + testPath + "...");
+        source = new DataSource(testPath );
+        Instances test = source.getDataSet();
 
         // Set class index to last attribute (expects DIED to be last in the CSV)
         train.setClassIndex(train.numAttributes() - 1);
@@ -65,20 +64,9 @@ public class Main {
 
         double accuracy = eval.pctCorrect(); // percentage
         System.out.printf("\n--- STAGE 1 (NAIVE BAYES) RESULTS ---%n");
-        System.out.printf("Accuracy: %.2f%%%n", accuracy);
+        printEvaluationMetrics(eval, test);
+        printConfusionMatrix(eval, test);
 
-        // Print per-class metrics
-        System.out.println("\nClassification Report:");
-        for (int i = 0; i < test.classAttribute().numValues(); i++) {
-            String label = test.classAttribute().value(i);
-            double prec = eval.precision(i);
-            double rec  = eval.recall(i);
-            double f1   = eval.fMeasure(i);
-            System.out.printf("Class %s: Precision=%.3f  Recall=%.3f  F1=%.3f%n", label, prec, rec, f1);
-        }
-
-        // Confusion matrix and TP/FP/TN/FN for mapping 0=Cured, 1=Died (assumes those nominal values exist)
-        double[][] cm = eval.confusionMatrix();
 
         int idx0 = test.classAttribute().indexOfValue("0");
         int idx1 = test.classAttribute().indexOfValue("1");
@@ -88,30 +76,90 @@ public class Main {
             idx1 = Math.min(1, test.classAttribute().numValues() - 1);
         }
 
-        int tn = (int) cm[idx0][idx0];
-        int fp = (int) cm[idx0][idx1];
-        int fn = (int) cm[idx1][idx0];
-        int tp = (int) cm[idx1][idx1];
-
-        System.out.println("\nConfusion Matrix:");
-        System.out.printf("True Positive (TP): %d%n", tp);
-        System.out.printf("False Positive (FP): %d%n", fp);
-        System.out.printf("True Negative (TN): %d%n", tn);
-        System.out.printf("False Negative (FN): %d%n", fn);
-
         // Find test instance indices predicted as '1' (Died)
         ArrayList<Integer> suspects = new ArrayList<>();
         for (int i = 0; i < test.numInstances(); i++) {
             double pred = nb.classifyInstance(test.instance(i));
             int predIndex = (int) pred;
-            if (predIndex == idx1) suspects.add(i); // i is test row index (0-based)
+            if (predIndex == idx1) suspects.add(i);
         }
         System.out.printf("%nTunnel Handoff: %d patients flagged as 'At Risk' sent to Stage 2.%n", suspects.size());
-
-        // Optional: reproducibility seed used for any random operations (not needed here but kept)
-        Random r = new Random(seed);
     }
 
+
+
+    private static void CrossValidateNaiveBayesWithUndersampling(String filePath) throws Exception {
+        // --- LOAD DATA ---
+        System.out.println("Loading " + filePath + "...");
+        DataSource source = new DataSource(filePath);
+        Instances data = source.getDataSet();
+
+        // Set class attribute (target)
+        data.setClass(data.attribute(TARGET));
+
+        // Keep only the features we need + target
+        Instances filteredData = filterAttributes(data);
+
+        // --- 10-FOLD CROSS-VALIDATION ---
+        int numFolds = 10;
+        Random random = new Random(42);
+        filteredData.randomize(random);
+        filteredData.stratify(numFolds);
+
+        // Lists to store metrics per fold
+        ArrayList<Double> accScores = new ArrayList<>();
+        ArrayList<Double> recallScores = new ArrayList<>();
+        ArrayList<Double> precScores = new ArrayList<>();
+        ArrayList<Double> f1Scores = new ArrayList<>();
+
+        System.out.println("\nStarting 10-Fold Cross-Validation for Stage 1 (Naive Bayes)...");
+        System.out.println("------------------------------------------------------------");
+        System.out.printf("%-5s | %-10s | %-10s | %-10s | %-10s\n",
+                "Fold", "Accuracy", "Recall", "Precision", "F1-Score");
+        System.out.println("------------------------------------------------------------");
+
+        // Perform 10-fold cross-validation
+        for (int fold = 0; fold < numFolds; fold++) {
+            // 1. Split Data
+            Instances train = filteredData.trainCV(numFolds, fold, random);
+            Instances test = filteredData.testCV(numFolds, fold);
+
+            // 2. Undersample ONLY the Training Data (Train = 50/50, Test = Reality)
+            Instances trainBalanced = strategicUndersample(train, random);
+
+            // 3. Train Naive Bayes
+            NaiveBayes nb = new NaiveBayes();
+            nb.buildClassifier(trainBalanced);
+
+            // 4. Evaluate on Test Data (Reality)
+            Evaluation eval = new Evaluation(test);
+            eval.evaluateModel(nb, test);
+
+            // 5. Record Metrics (assuming class index 1 is "DIED")
+            double acc = eval.pctCorrect() / 100.0;
+            double recall = eval.recall(1);
+            double precision = eval.precision(1);
+            double f1 = eval.fMeasure(1);
+
+            accScores.add(acc);
+            recallScores.add(recall);
+            precScores.add(precision);
+            f1Scores.add(f1);
+
+            System.out.printf("%-5d | %.4f     | %.4f     | %.4f     | %.4f\n",
+                    fold + 1, acc, recall, precision, f1);
+        }
+
+        System.out.println("------------------------------------------------------------");
+        System.out.println("\n--- FINAL 10-FOLD SUMMARY (STAGE 1) ---");
+        System.out.printf("Mean Accuracy:  %.2f%% (+/- %.2f%%)\n",
+                mean(accScores) * 100, stdev(accScores) * 100);
+        System.out.printf("Mean Recall:    %.2f%% (Target: >90%%)\n",
+                mean(recallScores) * 100);
+        System.out.printf("Mean Precision: %.2f%% (Expected: Low)\n",
+                mean(precScores) * 100);
+        System.out.printf("Mean F1-Score:  %.4f\n", mean(f1Scores));
+    }
 
 }
 

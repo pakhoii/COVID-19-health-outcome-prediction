@@ -1,5 +1,6 @@
 package com.hop.utils;
 
+import weka.classifiers.Evaluation;
 import weka.core.Attribute;
 import weka.core.Instance;
 import weka.core.Instances;
@@ -8,10 +9,29 @@ import weka.core.converters.CSVSaver;
 import weka.core.converters.ConverterUtils;
 import weka.filters.Filter;
 import weka.filters.unsupervised.attribute.NumericToNominal;
+import weka.filters.unsupervised.attribute.Remove;
 
 import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Random;
 
 public class Utils {
+    public final static String trainCSV = "data/naive_bayes/stage1_train.csv";
+    public final static String testCSV = "data/naive_bayes/stage1_test.csv";
+
+    public final static String trainARFF = "data/naive_bayes/stage1_train.arff";
+    public final static String testARFF = "data/naive_bayes/stage1_test.arff";
+
+    public final static String dataFullCSV = "data/preprocess/covid_cleaned.csv";
+    public final static String dataFullARFF = "data/preprocess/covid_cleaned.arff";
+
+    public static final String[] featuresStage1 = {"SEVERITY_INDEX", "AGE_GROUP", "SEX", "PNEUMONIA"};
+
+    public static final String TARGET = "DIED";
+
+    public final static int SEED = 42;
+
 
     // Convert numeric attributes to nominal except AGE
     /**
@@ -211,7 +231,6 @@ public class Utils {
     }
 
     // Load data from CSV file
-
     /**
      * Load data from a CSV file.
      * @param inputFilePath The path to the input CSV file
@@ -226,4 +245,178 @@ public class Utils {
             return null;
         }
     }
+
+    // Print evaluation metrics
+    /**
+     * Print evaluation metrics including accuracy, precision, recall, and F1-score for each class.
+     * @param eval The Evaluation object containing the evaluation results
+     * @param data The Instances object containing the dataset
+     * @throws Exception If an error occurs during metric calculation
+     */
+    public static void printEvaluationMetrics(Evaluation eval, Instances data) throws Exception {
+        if (eval == null || data == null) {
+            throw new IllegalArgumentException("Evaluation or data cannot be null");
+        }
+
+        System.out.printf("Accuracy: %.2f%%%n", eval.pctCorrect());
+
+        for (int i = 0; i < data.classAttribute().numValues(); i++) {
+            String label = data.classAttribute().value(i);
+            String name;
+            if (label.equals("0")) {
+                name = "Cured";
+            } else if (label.equals("1")) {
+                name = "Died";
+            } else {
+                name = "Class";
+            }
+            double precision = eval.precision(i);
+            double rec  = eval.recall(i);
+            double f1   = eval.fMeasure(i);
+            System.out.printf("%s %s: Precision=%.3f  Recall=%.3f  F1=%.3f%n", name,
+                    label, precision, rec, f1);
+        }
+    }
+
+    /**
+     * Print confusion matrix along with TP, FP, TN, FN counts.
+     * @param eval The Evaluation object containing the evaluation results
+     * @param dataNom The Instances object containing the dataset
+     * @throws Exception If an error occurs during metric calculation
+     */
+    public static void printConfusionMatrix(Evaluation eval, Instances dataNom) throws Exception {
+        if (eval == null || dataNom == null) {
+            throw new IllegalArgumentException("Evaluation or data cannot be null");
+        }
+        // Confusion matrix and TP/FP/TN/FN mapping (try to map '0'->cured, '1'->died)
+        double[][] cm = eval.confusionMatrix();
+        int idx0 = dataNom.classAttribute().indexOfValue("0");
+        int idx1 = dataNom.classAttribute().indexOfValue("1");
+        if (idx0 == -1 || idx1 == -1) {
+            idx0 = 0;
+            idx1 = Math.min(1, dataNom.classAttribute().numValues() - 1);
+        }
+
+        int tn = (int) cm[idx0][idx0];
+        int fp = (int) cm[idx0][idx1];
+        int fn = (int) cm[idx1][idx0];
+        int tp = (int) cm[idx1][idx1];
+
+        System.out.println("\nConfusion Matrix:");
+        System.out.printf("True Positive (TP): %d%n", tp);
+        System.out.printf("False Positive (FP): %d%n", fp);
+        System.out.printf("True Negative (TN): %d%n", tn);
+        System.out.printf("False Negative (FN): %d%n", fn);
+
+        System.out.println("\nConfusion Matrix:");
+        System.out.println("      Predict 0   Predict 1");
+        System.out.printf("Cured 0   %-7.0f %-7.0f%n", cm[0][0], cm[0][1]);
+        System.out.printf("Died  1   %-7.0f %-7.0f%n", cm[1][0], cm[1][1]);
+
+    }
+
+    /**
+     * Filter dataset to keep only specified features + target
+     * @param data  The original dataset
+     * @return      The filtered dataset with only specified features and target
+     */
+    public static Instances filterAttributes(Instances data) throws Exception {
+        // Create list of indices to keep
+        ArrayList<Integer> indicesToKeep = new ArrayList<>();
+
+        // Add target index
+        indicesToKeep.add(data.attribute(TARGET).index());
+
+        // Add feature indices
+        for (String feature : featuresStage1) {
+            indicesToKeep.add(data.attribute(feature).index());
+        }
+
+        // Create Remove filter to remove unwanted attributes
+        StringBuilder keepIndices = new StringBuilder();
+        for (int i = 0; i < indicesToKeep.size(); i++) {
+            keepIndices.append(indicesToKeep.get(i) + 1); // Weka uses 1-based indexing
+            if (i < indicesToKeep.size() - 1) {
+                keepIndices.append(",");
+            }
+        }
+
+        Remove remove = new Remove();
+        remove.setAttributeIndices(keepIndices.toString());
+        remove.setInvertSelection(true);
+        remove.setInputFormat(data);
+
+        Instances filtered = Filter.useFilter(data, remove);
+        filtered.setClass(filtered.attribute(TARGET));
+
+        return filtered;
+    }
+
+    /**
+     * Strategic undersampling to balance classes (50/50)
+     * Matches the died count by sampling from cured
+     * @param train     The training dataset
+     * @param random    Random object for shuffling
+     * @return          The balanced dataset after undersampling
+     */
+    public static Instances strategicUndersample(Instances train, Random random) {
+        // Separate instances by class
+        Instances died = new Instances(train, 0);
+        Instances cured = new Instances(train, 0);
+
+        int classIndex = train.classIndex();
+        for (int i = 0; i < train.numInstances(); i++) {
+            if (train.instance(i).classValue() == 1.0) {
+                died.add(train.instance(i));
+            } else {
+                cured.add(train.instance(i));
+            }
+        }
+
+        // Sample cured to match died count
+        int targetSize = died.numInstances();
+        cured.randomize(random);
+
+        Instances curedSampled = new Instances(cured, 0);
+        for (int i = 0; i < Math.min(targetSize, cured.numInstances()); i++) {
+            curedSampled.add(cured.instance(i));
+        }
+
+        // Combine and shuffle
+        Instances balanced = new Instances(died);
+        for (int i = 0; i < curedSampled.numInstances(); i++) {
+            balanced.add(curedSampled.instance(i));
+        }
+        balanced.randomize(random);
+
+        return balanced;
+    }
+
+    /**
+     * Calculate mean of a list of doubles
+     * @param values    The list of double values
+     * @return          The mean of the values
+     */
+    public static double mean(ArrayList<Double> values) {
+        double sum = 0.0;
+        for (double val : values) {
+            sum += val;
+        }
+        return sum / values.size();
+    }
+
+    /**
+     * Calculate standard deviation of a list of doubles
+     * @param values    The list of double values
+     * @return          The standard deviation of the values
+     */
+    public static double stdev(ArrayList<Double> values) {
+        double avg = mean(values);
+        double sumSquaredDiff = 0.0;
+        for (double val : values) {
+            sumSquaredDiff += Math.pow(val - avg, 2);
+        }
+        return Math.sqrt(sumSquaredDiff / values.size());
+    }
+
 }

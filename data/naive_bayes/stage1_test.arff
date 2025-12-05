@@ -1,9 +1,9 @@
-@relation 'covid_cleaned-weka.filters.unsupervised.attribute.NumericToNominal-R20-weka.filters.supervised.instance.StratifiedRemoveFolds-S42-N5-F1-weka.filters.unsupervised.attribute.Remove-V-R22,21,3,6,20'
+@relation 'covid-weka.filters.unsupervised.instance.RemoveWithValues-S0.0-C20-L4-last-weka.filters.unsupervised.attribute.Remove-R20,5-weka.filters.unsupervised.attribute.NumericToNominal-R1,2,3,4,5,6,8,9,10,11,12,13,14,15,16,17,18,19-weka.filters.unsupervised.attribute.ReplaceMissingValues-weka.filters.supervised.instance.StratifiedRemoveFolds-S42-N5-F1-weka.filters.unsupervised.attribute.Remove-V-R22,21,3,6,20'
 
-@attribute SEVERITY_INDEX numeric
-@attribute AGE_GROUP numeric
-@attribute SEX numeric
-@attribute PNEUMONIA numeric
+@attribute SEVERITY_INDEX {0,1,2,3}
+@attribute AGE_GROUP {0,1,2,3,4,5}
+@attribute SEX {0,1}
+@attribute PNEUMONIA {0,1}
 @attribute DIED {0,1}
 
 @data

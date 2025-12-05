@@ -1,56 +1,28 @@
 package com.hop.NaiveBayes;
 
 import weka.core.Instances;
-import weka.core.converters.ArffLoader;
-import weka.core.converters.CSVLoader;
 import weka.filters.Filter;
 import weka.filters.supervised.instance.StratifiedRemoveFolds;
 import weka.filters.unsupervised.attribute.NumericToNominal;
 import weka.filters.unsupervised.attribute.Remove;
+import weka.core.converters.ConverterUtils.DataSource;
 
-import java.io.File;
 import java.util.Random;
 
-import static com.hop.utils.Utils.saveARFF;
-import static com.hop.utils.Utils.saveCSV;
+import static com.hop.utils.Utils.*;
 
 public class CreateSet {
-    static int seed = 42;
-    final static String CSV = ".csv";
-    final static String ARFF = ".arff";
-    static String inputCSV = "data/preprocess/covid_cleaned" + CSV;
-    static String inputARFF = "data/preprocess/covid_cleaned" + ARFF;
 
-    static String outputTrainCSV = "data/naive_bayes/stage1_train" + CSV;
-    static String outputTestCSV = "data/naive_bayes/stage1_test" + CSV;
-    static String outputTrainARFF = "data/naive_bayes/stage1_train" + ARFF;
-    static String outputTestARFF = "data/naive_bayes/stage1_test" + ARFF;
 
     public static void main(String[] args) throws Exception {
-        CreateSet cs = new CreateSet();
-        cs.CreateSetNaiveBayesCSV();
+        CreateSetNaiveBayes(dataFullARFF);
     }
 
-    // Create stage1 train and test sets for Naive Bayes using CSV input
-    private void CreateSetNaiveBayesCSV() throws Exception {
-        // Load CSV
-        CSVLoader csvLoader = new CSVLoader();
-        csvLoader.setSource(new File(inputCSV));
-        Instances csvData = csvLoader.getDataSet();
-
-        CreateSetNaiveBayes(csvData);
-    }
-
-    // Create stage1 train and test sets for Naive Bayes using ARFF input
-    private void CreateSetNaiveBayesARFF() throws Exception {
-        ArffLoader arffLoader = new ArffLoader();
-        arffLoader.setSource(new File(inputARFF));
-        Instances arffData = arffLoader.getDataSet();
-
-        CreateSetNaiveBayes(arffData);
-    }
-
-    private static void CreateSetNaiveBayes(Instances data) throws Exception {
+    private static void CreateSetNaiveBayes(String filePath) throws Exception {
+        System.out.println("Loading " + filePath + "...");
+        DataSource source = new DataSource(filePath);
+        Instances data = source.getDataSet();
+        
         // Ensure DIED attribute exists
         int diedIdx = data.attribute("DIED") != null ? data.attribute("DIED").index() : -1;
         if (diedIdx == -1) throw new IllegalArgumentException("DIED attribute not found");
@@ -67,13 +39,13 @@ public class CreateSet {
         data.setClassIndex(data.attribute("DIED").index());
 
         // Randomize
-        data.randomize(new Random(seed));
+        data.randomize(new Random(SEED));
         if (data.classAttribute().isNominal()) data.stratify(5); // prepare for 5-fold -> 20% test
 
         // Create test (fold 1) and train (remaining folds)
         StratifiedRemoveFolds srf = new StratifiedRemoveFolds();
         srf.setNumFolds(5);
-        srf.setSeed(seed);
+        srf.setSeed(SEED);
         srf.setFold(1);
         srf.setInvertSelection(false); // get test
         srf.setInputFormat(data);
@@ -81,7 +53,7 @@ public class CreateSet {
 
         srf = new StratifiedRemoveFolds();
         srf.setNumFolds(5);
-        srf.setSeed(seed);
+        srf.setSeed(SEED);
         srf.setFold(1);
         srf.setInvertSelection(true); // get train
         srf.setInputFormat(data);
@@ -109,7 +81,7 @@ public class CreateSet {
         int nDied = diedInst.numInstances();
         Instances curedSampled;
         if (curedInst.numInstances() > nDied) {
-            curedInst.randomize(new Random(seed));
+            curedInst.randomize(new Random(SEED));
             curedSampled = new Instances(curedInst, 0, nDied);
         } else {
             curedSampled = new Instances(curedInst);
@@ -118,7 +90,7 @@ public class CreateSet {
         // Combine and shuffle
         Instances stage1Train = new Instances(diedInst);
         for (int i = 0; i < curedSampled.numInstances(); i++) stage1Train.add(curedSampled.instance(i));
-        stage1Train.randomize(new Random(seed));
+        stage1Train.randomize(new Random(SEED));
 
         // Select stage1 columns: SEVERITY_INDEX, AGE_GROUP, SEX, PNEUMONIA, DIED
         String[] cols = new String[] {"SEVERITY_INDEX", "AGE_GROUP", "SEX", "PNEUMONIA", "DIED"};
@@ -126,14 +98,14 @@ public class CreateSet {
         testPool = keepOnlyAttributes(testPool, cols);
 
         // Save CSVs
-        saveCSV(stage1Train, outputTrainCSV);
-        saveCSV(testPool, outputTestCSV);
+        saveCSV(stage1Train, trainCSV);
+        saveCSV(testPool, testCSV);
 
         System.out.println("Created stage1 train and test sets .csv successfully.");
 
         // Save ARFFs
-        saveARFF(stage1Train, outputTrainARFF);
-        saveARFF(testPool, outputTestARFF);
+        saveARFF(stage1Train, trainARFF);
+        saveARFF(testPool, testARFF);
 
         System.out.println("Created stage1 train and test sets .arff successfully.");
 

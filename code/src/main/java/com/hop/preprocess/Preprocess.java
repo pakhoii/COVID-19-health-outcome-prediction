@@ -2,9 +2,7 @@ package com.hop.preprocess;
 
 import weka.core.Instances;
 
-import static com.hop.utils.Utils.saveCSV;
-import static com.hop.utils.Utils.saveARFF;
-import static com.hop.utils.Utils.loadData;
+import static com.hop.utils.Utils.*;
 
 
 public class Preprocess {
@@ -12,8 +10,6 @@ public class Preprocess {
     public static void main(String[] args) throws Exception {
         preprocessAndExport("covid");
     }
-
-    // Preprocess and export to ARFF and CSV
 
     /**
      * Preprocess the dataset and export to ARFF and CSV files.
@@ -36,7 +32,9 @@ public class Preprocess {
                 saveCSV(cleaned_data, csvOutputFilePath);
                 System.out.println("Saved " + name + " files successfully");
             }
+
         }
+
     }
 
 }
