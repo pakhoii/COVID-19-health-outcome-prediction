@@ -6,7 +6,7 @@ import weka.core.Instance;
 import weka.core.Instances;
 import weka.core.converters.ArffSaver;
 import weka.core.converters.CSVSaver;
-import weka.core.converters.ConverterUtils;
+import weka.core.converters.ConverterUtils.DataSource;
 import weka.filters.Filter;
 import weka.filters.unsupervised.attribute.NumericToNominal;
 import weka.filters.unsupervised.attribute.Remove;
@@ -236,14 +236,18 @@ public class Utils {
      * @param inputFilePath The path to the input CSV file
      * @return Instances object containing the dataset
      */
-    public static Instances loadData(String inputFilePath) {
+    public static Instances loadData(String inputFilePath) throws Exception {
         try {
-            ConverterUtils.DataSource source = new ConverterUtils.DataSource(inputFilePath);
-            return source.getDataSet();
+            if (inputFilePath == null || inputFilePath.isEmpty()) {
+                throw new IllegalArgumentException("Input file path cannot be null or empty");
+            }
         } catch (Exception e) {
-            e.printStackTrace();
-            return null;
+            System.err.println("Error when loading data from " + inputFilePath);
+            throw e;
         }
+        System.out.println("Loading data from " + inputFilePath + "...");
+        DataSource source = new DataSource(inputFilePath);
+        return source.getDataSet();
     }
 
     // Print evaluation metrics
@@ -259,7 +263,6 @@ public class Utils {
         }
 
         System.out.printf("Accuracy: %.2f%%%n", eval.pctCorrect());
-
         for (int i = 0; i < data.classAttribute().numValues(); i++) {
             String label = data.classAttribute().value(i);
             String name;
