@@ -94,8 +94,14 @@ public class CreateSet {
 
         // Select stage1 columns: SEVERITY_INDEX, AGE_GROUP, SEX, PNEUMONIA, DIED
         String[] cols = new String[] {"SEVERITY_INDEX", "AGE_GROUP", "SEX", "PNEUMONIA", "DIED"};
+
+        saveCSV(stage1Train, dataFullBalanceCSV);
+        saveARFF(stage1Train, dataFullBalanceARFF);
+
+
         stage1Train = keepOnlyAttributes(stage1Train, cols);
         testPool = keepOnlyAttributes(testPool, cols);
+
 
         // Save CSVs
         saveCSV(stage1Train, trainCSV);

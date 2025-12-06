@@ -261,6 +261,14 @@ public class Cleaner {
             e.printStackTrace();
         }
 
+        // *** NEW: Final pass to ensure AGE stays as integer after imputation ***
+        ageIndex = data.attribute("AGE").index();
+        for (Instance inst : data) {
+            if (!inst.isMissing(ageIndex)) {
+                inst.setValue(ageIndex, Math.round(inst.value(ageIndex)));
+            }
+        }
+
         return data;
     }
 

@@ -26,6 +26,9 @@ public class Utils {
     public final static String dataFullCSV = "data/preprocess/covid_cleaned.csv";
     public final static String dataFullARFF = "data/preprocess/covid_cleaned.arff";
 
+    public final static String dataFullBalanceCSV = "data/preprocess/covid_cleaned_balanced.csv";
+    public final static String dataFullBalanceARFF = "data/preprocess/covid_cleaned_balanced.arff";
+
     public static final String[] featuresStage1 = {"SEVERITY_INDEX", "AGE_GROUP", "SEX", "PNEUMONIA"};
 
     public static final String TARGET = "DIED";
