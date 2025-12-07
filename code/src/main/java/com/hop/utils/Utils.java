@@ -29,7 +29,15 @@ public class Utils {
     public final static String dataFullBalanceCSV = "data/preprocess/covid_cleaned_balanced.csv";
     public final static String dataFullBalanceARFF = "data/preprocess/covid_cleaned_balanced.arff";
 
-    public static final String[] featuresStage1 = {"SEVERITY_INDEX", "AGE_GROUP", "SEX", "PNEUMONIA"};
+    public final static String saveModelStage1UnderSampling = "model/naive_bayes_stage1_undersampling.model";
+    public final static String saveModelStage1 = "model/naive_bayes_stage1.model";
+
+    public final static String saveModelStage21 = "model/tunnel_step1.model";
+    public final static String saveModelStage22 = "model/tunnel_step2.model";
+
+    public static final String[] featuresStage1 =
+            {"SEVERITY_INDEX", "AGE_GROUP", "SEX", "PNEUMONIA", "COPD", "ASTHMA", "TOBACCO"};
+
 
     public static final String TARGET = "DIED";
 

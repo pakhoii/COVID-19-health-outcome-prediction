@@ -3,6 +3,7 @@ package com.hop.NaiveBayes;
 import weka.classifiers.bayes.NaiveBayes;
 import weka.classifiers.Evaluation;
 import weka.core.Instances;
+import weka.core.SerializationHelper;
 import weka.filters.Filter;
 import weka.filters.unsupervised.attribute.NumericToNominal;
 
@@ -15,87 +16,14 @@ public class Main {
 
     public static void main(String[] args) throws Exception {
         System.out.println("--- Testing Naive Bayes Classifier for Stage 1 ---");
-        System.out.println("Method 1: Train/Test Split Evaluation");
-        NaiveBayesStage1(trainARFF, testARFF);
-        System.out.println("\nMethod 2: 10-Fold Cross-Validation with Strategic Undersampling");
-        CrossValidateNaiveBayesWithUndersampling(dataFullARFF);
-        System.out.println("\nMethod 3: 10-Fold Cross-Validation without Undersampling");
-        CrossValidateNaiveBayes(dataFullARFF);
+        System.out.println("\nMethod 1: 10-Fold Cross-Validation with Strategic Undersampling");
+        CrossValidateNaiveBayesWithUndersampling(dataFullBalanceARFF);
+        System.out.println("\nMethod 2: 10-Fold Cross-Validation without Undersampling");
+        CrossValidateNaiveBayes(dataFullBalanceARFF);
         System.out.println("\n--- End of Naive Bayes Testing ---");
     }
 
-    private static void NaiveBayesStage1(String trainPath, String testPath) throws Exception {
-        // Load training and testing data
-        Instances train = loadData(trainPath);
-        Instances test = loadData(testPath);
-
-        // Set class index to last attribute (expects DIED to be last in the CSV)
-        train.setClassIndex(train.numAttributes() - 1);
-        test.setClassIndex(test.numAttributes() - 1);
-
-        // Convert numeric attributes to nominal (categorical) using the train header
-        NumericToNominal n2n = new NumericToNominal();
-        n2n.setAttributeIndices("first-last");
-        n2n.setInputFormat(train);
-        train = Filter.useFilter(train, n2n);
-        // Apply the same conversion to test (using train's input format ensures consistent nominal mapping)
-        test = Filter.useFilter(test, n2n);
-
-        // Ensure class index is still correctly set after filtering
-        train.setClassIndex(train.numAttributes() - 1);
-        test.setClassIndex(test.numAttributes() - 1);
-
-        System.out.println("Training rows: " + train.numInstances());
-        System.out.println("Testing rows:  " + test.numInstances());
-
-        // Build Naive Bayes classifier
-        NaiveBayes nb = new NaiveBayes();
-        nb.setUseKernelEstimator(true);  // Match configuration
-        nb.buildClassifier(train);
-
-        // Evaluate
-        Evaluation eval = new Evaluation(train);
-        eval.evaluateModel(nb, test);
-
-        System.out.printf("\n--- STAGE 1 (NAIVE BAYES) RESULTS ---%n");
-
-        // Collect metrics into lists (single evaluation, so lists contain one value each)
-        ArrayList<Double> accList = new ArrayList<>();
-        ArrayList<Double> recList = new ArrayList<>();
-        ArrayList<Double> precList = new ArrayList<>();
-        ArrayList<Double> f1List = new ArrayList<>();
-
-        accList.add(eval.pctCorrect() / 100.0);
-        recList.add(eval.recall(1));
-        precList.add(eval.precision(1));
-        f1List.add(eval.fMeasure(1));
-
-        // Also print detailed metrics and confusion matrix
-        System.out.println("\n--- Detailed Metrics ---");
-        printEvaluationMetrics(eval, test);
-        printConfusionMatrix(eval, test);
-        // Use the Weka-style summary printer
-        printWekaStyleSummary(accList, recList, precList, f1List, test);
-
-
-
-        int idx1 = test.classAttribute().indexOfValue("1");
-        // fallback: if "0"/"1" not present, assume index 0 = cured, 1 = died (order from CSV)
-        if (idx1 == -1) {
-            idx1 = Math.min(1, test.classAttribute().numValues() - 1);
-        }
-
-        // Find test instance indices predicted as '1' (Died)
-        ArrayList<Integer> suspects = new ArrayList<>();
-        for (int i = 0; i < test.numInstances(); i++) {
-            double pred = nb.classifyInstance(test.instance(i));
-            int predIndex = (int) pred;
-            if (predIndex == idx1) suspects.add(i);
-        }
-        System.out.printf("%nTunnel Handoff: %d patients flagged as 'At Risk' sent to Stage 2.%n", suspects.size());
-    }
-
-    private static void CrossValidateNaiveBayesWithUndersampling(String filePath) throws Exception {
+    public static void CrossValidateNaiveBayesWithUndersampling(String filePath) throws Exception {
         // --- LOAD DATA ---
         Instances data = loadData(filePath);
 
@@ -122,7 +50,7 @@ public class Main {
         System.out.printf("%-5s | %-10s | %-10s | %-10s | %-10s\n",
                 "Fold", "Accuracy", "Recall", "Precision", "F1-Score");
         System.out.println("------------------------------------------------------------");
-
+        ArrayList<Double> buildTime = new ArrayList<>();
         // Perform 10-fold cross-validation
         for (int fold = 0; fold < numFolds; fold++) {
             // 1. Split Data
@@ -134,7 +62,11 @@ public class Main {
 
             // 3. Train Naive Bayes
             NaiveBayes nb = new NaiveBayes();
+            long startBuild = System.nanoTime();
             nb.buildClassifier(trainBalanced);
+            long endBuild = System.nanoTime();
+            buildTime.add((endBuild - startBuild) / 1e9); // in seconds
+            if (fold == 4) SerializationHelper.write(saveModelStage1UnderSampling, nb);
 
             // 4. Evaluate on Test Data (Reality)
             Evaluation eval = new Evaluation(test);
@@ -156,51 +88,55 @@ public class Main {
         }
 
         printWekaStyleSummary(accScores, recallScores, precisionScores, f1Scores, filteredData);
+        System.out.println("\nAverage Model Build Time per Fold: " + mean(buildTime) + " seconds");
     }
 
-    private static void CrossValidateNaiveBayes(String filePath) throws Exception {
+    public static void CrossValidateNaiveBayes(String filePath) throws Exception {
         // --- LOAD DATA ---
         Instances data = loadData(filePath);
 
-        // Set class attribute (target)
+        // Set class attribute
         data.setClass(data.attribute(TARGET));
 
-        // Keep only the features we need + target
+        // Keep only selected features
         Instances filteredData = filterAttributes(data);
 
-        // --- 10-FOLD CROSS-VALIDATION ---
+        // --- 10-FOLD CROSS VALIDATION ---
         int numFolds = 10;
         Random random = new Random(42);
         filteredData.randomize(random);
         filteredData.stratify(numFolds);
 
-        // Lists to store metrics per fold
         ArrayList<Double> accScores = new ArrayList<>();
         ArrayList<Double> recallScores = new ArrayList<>();
         ArrayList<Double> precisionScores = new ArrayList<>();
         ArrayList<Double> f1Scores = new ArrayList<>();
-
-        System.out.println("\nStarting 10-Fold Cross-Validation for Stage 1 (Naive Bayes)...");
+        ArrayList<Double> buildTime = new ArrayList<>();
+        System.out.println("\nStarting 10-Fold Cross-Validation (Naive Bayes, No Undersampling)...");
         System.out.println("------------------------------------------------------------");
         System.out.printf("%-5s | %-10s | %-10s | %-10s | %-10s\n",
                 "Fold", "Accuracy", "Recall", "Precision", "F1-Score");
         System.out.println("------------------------------------------------------------");
 
-        // Perform 10-fold cross-validation
+        // Perform cross-validation
         for (int fold = 0; fold < numFolds; fold++) {
             // 1. Split Data
             Instances train = filteredData.trainCV(numFolds, fold, random);
             Instances test = filteredData.testCV(numFolds, fold);
 
-            // 2. Train Naive Bayes
+            // 2. Train Naive Bayes DIRECTLY (NO BALANCING)
             NaiveBayes nb = new NaiveBayes();
+            long startBuild = System.nanoTime();
             nb.buildClassifier(train);
+            long endBuild = System.nanoTime();
+            buildTime.add((endBuild - startBuild) / 1e9); // in seconds
+            if (fold == 4) SerializationHelper.write(saveModelStage1, nb);
 
-            // 3. Evaluate on Test Data (Reality)
+            // 3. Evaluate on test data
             Evaluation eval = new Evaluation(test);
             eval.evaluateModel(nb, test);
 
-            // 4. Record Metrics (assuming class index 1 is "DIED")
+            // 4. Extract metrics (Assume class index 1 is "DIED")
             double acc = eval.pctCorrect() / 100.0;
             double recall = eval.recall(1);
             double precision = eval.precision(1);
@@ -216,7 +152,9 @@ public class Main {
         }
 
         printWekaStyleSummary(accScores, recallScores, precisionScores, f1Scores, filteredData);
+        System.out.println("\nAverage Model Build Time per Fold: " + mean(buildTime) + " seconds");
     }
+
 
 
 }
