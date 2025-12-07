@@ -10,25 +10,26 @@ import weka.filters.Filter;
 import weka.filters.unsupervised.attribute.Remove;
 import java.util.ArrayList;
 import java.util.Random;
+import java.io.File;
 
-import static com.hop.utils.Utils.*;
+import static com.hop.utils.Utils.dataFullARFF;
 
-public class CascadeTunnelCrossValidation {
+public class CascadeNoUndersamplingCrossValidation {
 
     // --- CONFIGURATION ---
-    private static final String FILENAME = dataFullBalanceARFF;
+    private static final String FILENAME = dataFullARFF;
     private static final String[] STAGE1_FEATURES = {
             "SEVERITY_INDEX", "AGE_GROUP", "SEX", "PNEUMONIA",
             "INMSUPR", "DIABETES", "HIPERTENSION", "CARDIOVASCULAR"
     };
     private static final String TARGET = "DIED";
-    private static final String STAGE1_MODEL_PATH = saveModelStage21;
-    private static final String STAGE2_MODEL_PATH = saveModelStage22;
+    private static final String STAGE1_MODEL_PATH = "models/cascade_noUS_stage1_nb.model";
+    private static final String STAGE2_MODEL_PATH = "models/cascade_noUS_stage2_rf.model";
     private static final int SAVE_FOLD = 4; // Save models from fold 5 (index 4)
 
     public static void main(String[] args) {
         try {
-            crossValidateCascadeTunnel(FILENAME);
+            crossValidateCascadeNoUndersampling(FILENAME);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -36,10 +37,11 @@ public class CascadeTunnelCrossValidation {
 
     /**
      * Performs 10-fold cross-validation with Cascade Tunnel (Stage 1 + Stage 2)
-     * Stage 1: Naive Bayes trained on balanced data (screener)
+     * WITHOUT UNDERSAMPLING - Uses full data with class weights for both stages
+     * Stage 1: Naive Bayes trained on full imbalanced data (screener)
      * Stage 2: Random Forest trained ONLY on suspects (specialist)
      */
-    public static void crossValidateCascadeTunnel(String filePath) throws Exception {
+    private static void crossValidateCascadeNoUndersampling(String filePath) throws Exception {
         // --- LOAD DATA ---
         System.out.println("Loading " + filePath + "...");
         DataSource source = new DataSource(filePath);
@@ -65,7 +67,7 @@ public class CascadeTunnelCrossValidation {
         ArrayList<Double> stage1BuildTime = new ArrayList<>();
         ArrayList<Double> stage2BuildTime = new ArrayList<>();
 
-        System.out.println("\nStarting Cascade Tunnel (Stage 2 Trained ONLY on Suspects)...");
+        System.out.println("\nStarting Cascade Tunnel WITHOUT Undersampling...");
         System.out.println("-----------------------------------------------------------------");
         System.out.printf("%-5s | %-10s | %-10s | %-10s | %-10s\n",
                 "Fold", "Accuracy", "Recall", "Precision", "F1-Score");
@@ -78,11 +80,15 @@ public class CascadeTunnelCrossValidation {
             Instances test = filteredData.testCV(numFolds, fold);
 
             // === STEP B: TRAIN STAGE 1 (Screener - Naive Bayes) ===
-            Instances trainBalanced = strategicUndersample(train, random);
+            // NO UNDERSAMPLING - Use full training data with class weights
+            Instances trainStage1 = new Instances(train);
+            applyClassWeights(trainStage1, 1.0, 2.0); // Give class 1 double importance
 
             NaiveBayes nb = new NaiveBayes();
+            nb.setUseKernelEstimator(true);
+
             long startBuild1 = System.nanoTime();
-            nb.buildClassifier(trainBalanced);
+            nb.buildClassifier(trainStage1);
             long endBuild1 = System.nanoTime();
             stage1BuildTime.add((endBuild1 - startBuild1) / 1e9);
 
@@ -105,17 +111,16 @@ public class CascadeTunnelCrossValidation {
             // === STEP D: TRAIN STAGE 2 (Specialist - Random Forest) ===
             RandomForest rf = new RandomForest();
 
-            // OPTIMIZED PARAMETERS (based on your requirements + best practices)
-            rf.setNumIterations(20);        // Increased from 20 for better performance
-            rf.setMaxDepth(10);             // Increased from 10 for more complexity
-            rf.setNumFeatures(3);           // 0 = sqrt(features) - good default
+            // OPTIMIZED PARAMETERS
+            rf.setNumIterations(100);       // More trees for better performance
+            rf.setMaxDepth(20);             // Deeper trees
+            rf.setNumFeatures(0);           // sqrt(features)
             rf.setSeed(42);
-            rf.setNumExecutionSlots(8);     // FIXED: Use 1 for single-threaded (was -1)
-            // Note: Change to 2, 4, or 8 for multi-threading if your Weka version supports it
+            rf.setNumExecutionSlots(1);     // Single-threaded
 
             long startBuild2 = System.nanoTime();
             if (trainSpecialist.numInstances() > 0) {
-                // Apply class weights: 0=1.0, 1=2.0 (equivalent to class_weight={0: 1, 1: 2})
+                // Apply class weights for Stage 2 as well
                 applyClassWeights(trainSpecialist, 1.0, 2.0);
                 rf.buildClassifier(trainSpecialist);
             } else {
@@ -128,12 +133,12 @@ public class CascadeTunnelCrossValidation {
 
             // === SAVE MODELS FROM FOLD 5 ===
             if (fold == SAVE_FOLD) {
-//                System.out.println("\n>>> Saving models from fold " + (fold + 1) + "...");
+                System.out.println("\n>>> Saving models from fold " + (fold + 1) + "...");
                 SerializationHelper.write(STAGE1_MODEL_PATH, nb);
                 SerializationHelper.write(STAGE2_MODEL_PATH, rf);
-//                System.out.println("    Stage 1 (NB) saved to: " + STAGE1_MODEL_PATH);
-//                System.out.println("    Stage 2 (RF) saved to: " + STAGE2_MODEL_PATH);
-//                System.out.println("    Models saved successfully!\n");
+                System.out.println("    Stage 1 (NB) saved to: " + STAGE1_MODEL_PATH);
+                System.out.println("    Stage 2 (RF) saved to: " + STAGE2_MODEL_PATH);
+                System.out.println("    Models saved successfully!\n");
             }
 
             // === STEP E: TEST (Global Matrix Addition Logic) ===
@@ -194,7 +199,7 @@ public class CascadeTunnelCrossValidation {
         // Print full Weka-style summary
         printWekaStyleSummary(accScores, recallScores, precisionScores, f1Scores, filteredData);
 
-        System.out.println("\n--- Cascade Tunnel Performance Summary ---");
+        System.out.println("\n--- Cascade Tunnel (No Undersampling) Performance Summary ---");
         System.out.printf("Average Stage 1 Build Time: %.4f seconds\n", mean(stage1BuildTime));
         System.out.printf("Average Stage 2 Build Time: %.4f seconds\n", mean(stage2BuildTime));
         System.out.printf("Total Average Build Time:   %.4f seconds\n",
@@ -202,15 +207,70 @@ public class CascadeTunnelCrossValidation {
         System.out.println("\n--- Saved Models ---");
         System.out.println("Stage 1 Model: " + STAGE1_MODEL_PATH);
         System.out.println("Stage 2 Model: " + STAGE2_MODEL_PATH);
-        System.out.println("\nCascade Tunnel (Stage 2) Evaluation Complete.");
+        System.out.println("\nCascade Tunnel (No Undersampling) Evaluation Complete.");
+    }
+
+    /**
+     * Apply class weights to instances (equivalent to scikit-learn's class_weight)
+     * @param data Dataset to apply weights to
+     * @param weight0 Weight for class 0 (Cured)
+     * @param weight1 Weight for class 1 (Died)
+     */
+    private static void applyClassWeights(Instances data, double weight0, double weight1) {
+        for (int i = 0; i < data.numInstances(); i++) {
+            Instance inst = data.instance(i);
+            int classValue = (int) inst.classValue();
+
+            if (classValue == 0) {
+                inst.setWeight(weight0);
+            } else if (classValue == 1) {
+                inst.setWeight(weight1);
+            }
+        }
+    }
+
+    /**
+     * Filter dataset to keep only specified features + target
+     */
+    private static Instances filterAttributes(Instances data, String[] features) throws Exception {
+        ArrayList<Integer> indicesToKeep = new ArrayList<>();
+
+        // Add target index
+        indicesToKeep.add(data.attribute(TARGET).index());
+
+        // Add feature indices
+        for (String feature : features) {
+            Attribute attr = data.attribute(feature);
+            if (attr != null) {
+                indicesToKeep.add(attr.index());
+            }
+        }
+
+        // Create Remove filter to remove unwanted attributes
+        StringBuilder keepIndices = new StringBuilder();
+        for (int i = 0; i < indicesToKeep.size(); i++) {
+            keepIndices.append(indicesToKeep.get(i) + 1); // Weka uses 1-based indexing
+            if (i < indicesToKeep.size() - 1) {
+                keepIndices.append(",");
+            }
+        }
+
+        Remove remove = new Remove();
+        remove.setAttributeIndices(keepIndices.toString());
+        remove.setInvertSelection(true);
+        remove.setInputFormat(data);
+
+        Instances filtered = Filter.useFilter(data, remove);
+        filtered.setClass(filtered.attribute(TARGET));
+
+        return filtered;
     }
 
     /**
      * Load and use the saved cascade tunnel models for prediction
-     * Example usage for loading the models
      */
     public static void loadAndPredict(String testDataPath) throws Exception {
-        System.out.println("\n=== Loading Saved Cascade Tunnel Models ===");
+        System.out.println("\n=== Loading Saved Cascade Tunnel Models (No Undersampling) ===");
 
         // Load models
         NaiveBayes stage1 = (NaiveBayes) SerializationHelper.read(STAGE1_MODEL_PATH);
@@ -273,102 +333,6 @@ public class CascadeTunnelCrossValidation {
         System.out.println("\nConfusion Matrix:");
         System.out.printf("TP: %d  FP: %d\n", tp, fp);
         System.out.printf("FN: %d  TN: %d\n", fn, tn);
-    }
-
-    /**
-     * Apply class weights to instances (equivalent to scikit-learn's class_weight)
-     * @param data Dataset to apply weights to
-     * @param weight0 Weight for class 0 (Cured)
-     * @param weight1 Weight for class 1 (Died)
-     */
-    private static void applyClassWeights(Instances data, double weight0, double weight1) {
-        for (int i = 0; i < data.numInstances(); i++) {
-            Instance inst = data.instance(i);
-            int classValue = (int) inst.classValue();
-
-            if (classValue == 0) {
-                inst.setWeight(weight0);
-            } else if (classValue == 1) {
-                inst.setWeight(weight1);
-            }
-        }
-    }
-
-    /**
-     * Strategic undersampling to balance classes (50/50)
-     */
-    private static Instances strategicUndersample(Instances train, Random random) {
-        Instances died = new Instances(train, 0);
-        Instances cured = new Instances(train, 0);
-
-        for (int i = 0; i < train.numInstances(); i++) {
-            if ((int) train.instance(i).classValue() == 1) {
-                died.add(train.instance(i));
-            } else {
-                cured.add(train.instance(i));
-            }
-        }
-
-        // CRITICAL: Use minimum size to prevent crashes
-        int nSize = Math.min(died.numInstances(), cured.numInstances());
-
-        // Sample both classes to the same size
-        died.randomize(random);
-        cured.randomize(random);
-
-        Instances diedSampled = new Instances(died, 0);
-        Instances curedSampled = new Instances(cured, 0);
-
-        for (int i = 0; i < nSize; i++) {
-            diedSampled.add(died.instance(i));
-            curedSampled.add(cured.instance(i));
-        }
-
-        // Combine and shuffle
-        Instances balanced = new Instances(diedSampled);
-        for (int i = 0; i < curedSampled.numInstances(); i++) {
-            balanced.add(curedSampled.instance(i));
-        }
-        balanced.randomize(random);
-
-        return balanced;
-    }
-
-    /**
-     * Filter dataset to keep only specified features + target
-     */
-    private static Instances filterAttributes(Instances data, String[] features) throws Exception {
-        ArrayList<Integer> indicesToKeep = new ArrayList<>();
-
-        // Add target index
-        indicesToKeep.add(data.attribute(TARGET).index());
-
-        // Add feature indices
-        for (String feature : features) {
-            Attribute attr = data.attribute(feature);
-            if (attr != null) {
-                indicesToKeep.add(attr.index());
-            }
-        }
-
-        // Create Remove filter to remove unwanted attributes
-        StringBuilder keepIndices = new StringBuilder();
-        for (int i = 0; i < indicesToKeep.size(); i++) {
-            keepIndices.append(indicesToKeep.get(i) + 1); // Weka uses 1-based indexing
-            if (i < indicesToKeep.size() - 1) {
-                keepIndices.append(",");
-            }
-        }
-
-        Remove remove = new Remove();
-        remove.setAttributeIndices(keepIndices.toString());
-        remove.setInvertSelection(true);
-        remove.setInputFormat(data);
-
-        Instances filtered = Filter.useFilter(data, remove);
-        filtered.setClass(filtered.attribute(TARGET));
-
-        return filtered;
     }
 
     /**
@@ -438,10 +402,10 @@ public class CascadeTunnelCrossValidation {
                 "Weighted Avg.", weightedTPRate, weightedFPRate, weightedPrec, weightedTPRate,
                 weightedF1, mcc, 0.95, "");
 
-        System.out.println("\n--- FINAL 10-FOLD SUMMARY (CASCADE TUNNEL) ---");
+        System.out.println("\n--- FINAL 10-FOLD SUMMARY (CASCADE NO UNDERSAMPLING) ---");
         System.out.printf("Mean Accuracy:  %.2f%% (+/- %.2f%%)\n",
                 meanAcc * 100, stdev(accList) * 100);
-        System.out.printf("Mean Recall:    %.2f%% (Target: >90%%)\n",
+        System.out.printf("Mean Recall:    %.2f%%\n",
                 meanRec * 100);
         System.out.printf("Mean Precision: %.2f%%\n",
                 meanPrec * 100);
