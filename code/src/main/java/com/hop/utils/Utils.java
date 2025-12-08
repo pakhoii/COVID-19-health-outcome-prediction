@@ -37,6 +37,10 @@ public class Utils {
     public final static String saveModelStage21NoUndersampling = "model/cascade_noUS_stage1_nb.model";
     public final static String saveModelStage22NoUndersampling = "model/cascade_noUS_stage2_nb.model";
 
+    public final static String exportedNaiveBayesWithUndersampling = "exported_models/naive_bayes_undersampling.csv";
+    public final static String exportedNaiveBayesNoUndersampling = "exported_models/naive_bayes_no_undersampling.csv";
+    public final static String exportedCascadeTunnel = "exported_models/cascade_tunnel.csv";
+
     public static final String[] featuresStage1 =
             {"SEVERITY_INDEX", "AGE_GROUP", "SEX", "PNEUMONIA", "COPD", "ASTHMA", "TOBACCO"};
 
