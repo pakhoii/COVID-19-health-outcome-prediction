@@ -32,8 +32,11 @@ public class Utils {
     public final static String saveModelStage1UnderSampling = "model/naive_bayes_stage1_undersampling.model";
     public final static String saveModelStage1 = "model/naive_bayes_stage1.model";
 
-    public final static String saveModelStage21 = "model/tunnel_step1.model";
-    public final static String saveModelStage22 = "model/tunnel_step2.model";
+    public final static String saveModelStage21Undersampling = "model/tunnel_step1.model";
+    public final static String saveModelStage22Undersampling = "model/tunnel_step2.model";
+
+    public final static String saveModelStage21NoUndersampling = "model/cascade_noUS_stage1_nb.model";
+    public final static String saveModelStage22NoUndersampling = "model/cascade_noUS_stage2_nb.model";
 
     public static final String[] featuresStage1 =
             {"SEVERITY_INDEX", "AGE_GROUP", "SEX", "PNEUMONIA", "COPD", "ASTHMA", "TOBACCO"};

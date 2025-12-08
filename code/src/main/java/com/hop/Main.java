@@ -19,7 +19,5 @@ public class Main {
         System.out.println("\n--- End of Naive Bayes Testing ---");
         System.out.println("--- Tunnel ---");
         crossValidateCascadeTunnel(dataFullARFF);
-
-
     }
 }

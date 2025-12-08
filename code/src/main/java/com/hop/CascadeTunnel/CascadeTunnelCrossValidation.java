@@ -22,8 +22,8 @@ public class CascadeTunnelCrossValidation {
             "INMSUPR", "DIABETES", "HIPERTENSION", "CARDIOVASCULAR"
     };
     private static final String TARGET = "DIED";
-    private static final String STAGE1_MODEL_PATH = saveModelStage21;
-    private static final String STAGE2_MODEL_PATH = saveModelStage22;
+    private static final String STAGE1_MODEL_PATH = saveModelStage21Undersampling;
+    private static final String STAGE2_MODEL_PATH = saveModelStage22Undersampling;
     private static final int SAVE_FOLD = 4; // Save models from fold 5 (index 4)
 
     public static void main(String[] args) {
