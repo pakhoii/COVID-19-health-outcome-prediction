@@ -8,6 +8,7 @@ import weka.core.SerializationHelper;
 import weka.core.converters.ConverterUtils.DataSource;
 import weka.filters.Filter;
 import weka.filters.unsupervised.attribute.Remove;
+import weka.filters.supervised.instance.Resample;
 
 import java.io.BufferedWriter;
 import java.io.FileWriter;
@@ -30,7 +31,7 @@ public class ModelExporter {
             System.out.println("--- Exporting Single Model: " + modelPath + " ---");
             Classifier classifier = (Classifier) SerializationHelper.read(modelPath);
 
-            // Load and filter data
+            // Load dataset w/ fixed seed for consistency
             Instances data = loadDataset(datasetPath);
             data = Utils.filterAttributes(data);
 
@@ -64,7 +65,7 @@ public class ModelExporter {
             Classifier stage1 = (Classifier) SerializationHelper.read(stage1Path);
             Classifier stage2 = (Classifier) SerializationHelper.read(stage2Path);
 
-            // Load data
+            // Load data w/ same sampling as Single Model
             Instances data = loadDataset(datasetPath);
             data = filterAttributes(data, STAGE1_FEATURES);
 
@@ -129,6 +130,7 @@ public class ModelExporter {
     }
 
     private static Instances loadDataset(String path) throws Exception {
+        System.out.println("Loading dataset from: " + path);
         DataSource source = new DataSource(path);
         Instances data = source.getDataSet();
 
@@ -139,7 +141,21 @@ public class ModelExporter {
             data.setClassIndex(data.numAttributes() - 1);
         }
 
-        // Filter attributes
+        // Resampling logic for consistency across models
+        int maxSamplesForVis = 100000;
+        if (data.numInstances() > maxSamplesForVis) {
+            double percent = ((double) maxSamplesForVis / data.numInstances()) * 100;
+            System.out.println("Data too large (" + data.numInstances() + "). Resampling to " + String.format("%.2f", percent) + "% (~" + maxSamplesForVis + " rows)...");
+
+            Resample resample = new Resample();
+            resample.setBiasToUniformClass(0.0);
+            resample.setNoReplacement(true);
+            resample.setSampleSizePercent(percent);
+            resample.setRandomSeed(42); // FIXED SEED guarantees same sample for same dataset
+            resample.setInputFormat(data);
+            data = Filter.useFilter(data, resample);
+        }
+
         return data;
     }
 

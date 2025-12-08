@@ -112,7 +112,7 @@ export default function PredictionHistogram({
                 })
                 .on("mouseout", function () {
                     d3.select(this).style("opacity", 0.6);
-                    tooltip.transition().duration(500).style("opacity", 0.6);
+                    tooltip.transition().duration(100).style("opacity", 0);
                 });
         }
 
