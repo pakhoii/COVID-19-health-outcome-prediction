@@ -1,13 +1,9 @@
 package com.hop;
 
-import weka.core.Instances;
-import weka.core.converters.ConverterUtils.*;
-
 import static com.hop.CascadeTunnel.CascadeTunnelCrossValidation.crossValidateCascadeTunnel;
 import static com.hop.NaiveBayes.Main.CrossValidateNaiveBayes;
 import static com.hop.NaiveBayes.Main.CrossValidateNaiveBayesWithUndersampling;
 import static com.hop.utils.Utils.*;
-import static com.hop.utils.Utils.dataFullBalanceARFF;
 
 public class Main {
     public static void main(String[] args) throws Exception {

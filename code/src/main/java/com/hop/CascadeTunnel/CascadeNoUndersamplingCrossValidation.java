@@ -5,12 +5,10 @@ import weka.core.converters.ConverterUtils.DataSource;
 import weka.core.SerializationHelper;
 import weka.classifiers.bayes.NaiveBayes;
 import weka.classifiers.trees.RandomForest;
-import weka.classifiers.Evaluation;
 import weka.filters.Filter;
 import weka.filters.unsupervised.attribute.Remove;
 import java.util.ArrayList;
 import java.util.Random;
-import java.io.File;
 
 import static com.hop.utils.Utils.*;
 
