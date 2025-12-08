@@ -3,7 +3,7 @@
 
 ## 1. Description
 
-This module is responsible for preprocessing the raw datasets located in the `/data` directory. The primary goal is to clean, standardize, and transform the data into a usable format for analysis and model training. The final cleaned datasets are then exported in both `.csv` (for general use) and `.arff` (for Weka) formats.
+This module is responsible for preprocessing the raw datasets located in the `/data` directory. The primary goal is to clean, standardize, and transform the data into a usable format for analysis and model training. The final cleaned datasets are then exported in both `.csv` (for general use) and `.arff` (for Weka) formats in the directory `/data/preprocess`.
 
 **Task Owner:** Pham Anh Khoi
 
@@ -58,7 +58,15 @@ This is a large, complex dataset requiring multiple cleaning steps.
         $$X^2=\sum{\frac{(\text{Observed}-\text{Expected})^2}{\text{Expected}}}$$
     -   The data is then grouped by the values of this most correlated column.
     -   Missing values are imputed using the **mode** (most frequent value) of each respective group. Any remaining missing values are filled using a global mode.
-1.  **Finalize and Export:** The fully cleaned `Instances` object is returned and saved.
+7. **Create Age Groups:** A new nominal feature `AGE_GROUP` is created by binning the `AGE` attribute into the following categories:
+   - `0-17` (Pediatric)
+   - `18-39` (Young Adult - Low Risk)
+   - `40-49` (Adult - Moderate Risk)
+   - `50-59` (Late Adult - High Risk)
+   - `60-69` (Senior - Very High Risk)
+   - `70+` (Elderly - Critical Risk)
+8. 
+7. **Finalize and Export:** The fully cleaned `Instances` object is returned and saved.
 
 #### **Final Data Profile:**
 
@@ -66,25 +74,32 @@ This is a large, complex dataset requiring multiple cleaning steps.
 <summary>Click to see unique values after preprocessing</summary>
 
 -   **USMER** (2 unique): `[0, 1]`
+  - `0`: patient treated medical units of the first level
+  - `1`: patient treated medical units of the second level
 -   **MEDICAL_UNIT** (13 unique): `[1, 0, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]`
 -   **SEX** (2 unique): `[1, 0]`
+  - `0`: Male
+  - `1`: Female
 -   **PATIENT_TYPE** (2 unique): `[1, 0]`
+  - `1`: Home
+  - `0`: Hospitalized
 -   **INTUBED** (2 unique): `[0, 1]`
 -   **PNEUMONIA** (2 unique): `[1, 0]`
--   **AGE** (118 unique): `[65.0, 72.0, 55.0, ...]`
+-   **AGE** (117 unique): `[0, 1 ,3->96, 100->121]`
 -   **PREGNANT** (2 unique): `[0, 1]`
 -   **DIABETES** (2 unique): `[0, 1]`
 -   **COPD** (2 unique): `[0, 1]`
 -   **ASTHMA** (2 unique): `[0, 1]`
 -   **INMSUPR** (2 unique): `[0, 1]`
--   **HIPERTENSION** (2 unique): `[1, 0]`
+-   **HIPERTENSION** (2 unique): `[0, 1]`
 -   **OTHER_DISEASE** (2 unique): `[0, 1]`
 -   **CARDIOVASCULAR** (2 unique): `[0, 1]`
 -   **OBESITY** (2 unique): `[0, 1]`
 -   **RENAL_CHRONIC** (2 unique): `[0, 1]`
 -   **TOBACCO** (2 unique): `[0, 1]`
 -   **ICU** (2 unique): `[0, 1]`
--   **DIED** (2 unique): `[1, 0]`
+-   **DIED** (2 unique): `[0, 1]`
+-   **AGE_GROUP** (6 unique): `['0-17', '18-39', '40-49', '50-59', '60-69', '70+']`
 
 </details>
 
