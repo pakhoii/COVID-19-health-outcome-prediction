@@ -5,14 +5,12 @@ import weka.core.converters.ConverterUtils.DataSource;
 import weka.core.SerializationHelper;
 import weka.classifiers.bayes.NaiveBayes;
 import weka.classifiers.trees.RandomForest;
-import weka.classifiers.Evaluation;
 import weka.filters.Filter;
 import weka.filters.unsupervised.attribute.Remove;
 import java.util.ArrayList;
 import java.util.Random;
-import java.io.File;
 
-import static com.hop.utils.Utils.dataFullARFF;
+import static com.hop.utils.Utils.*;
 
 public class CascadeNoUndersamplingCrossValidation {
 
@@ -23,8 +21,8 @@ public class CascadeNoUndersamplingCrossValidation {
             "INMSUPR", "DIABETES", "HIPERTENSION", "CARDIOVASCULAR"
     };
     private static final String TARGET = "DIED";
-    private static final String STAGE1_MODEL_PATH = "models/cascade_noUS_stage1_nb.model";
-    private static final String STAGE2_MODEL_PATH = "models/cascade_noUS_stage2_rf.model";
+    private static final String STAGE1_MODEL_PATH = saveModelStage21NoUndersampling;
+    private static final String STAGE2_MODEL_PATH = saveModelStage22NoUndersampling;
     private static final int SAVE_FOLD = 4; // Save models from fold 5 (index 4)
 
     public static void main(String[] args) {

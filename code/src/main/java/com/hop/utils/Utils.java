@@ -13,7 +13,6 @@ import weka.filters.unsupervised.attribute.Remove;
 
 import java.io.File;
 import java.util.ArrayList;
-import java.util.List;
 import java.util.Random;
 
 public class Utils {
@@ -32,8 +31,15 @@ public class Utils {
     public final static String saveModelStage1UnderSampling = "model/naive_bayes_stage1_undersampling.model";
     public final static String saveModelStage1 = "model/naive_bayes_stage1.model";
 
-    public final static String saveModelStage21 = "model/tunnel_step1.model";
-    public final static String saveModelStage22 = "model/tunnel_step2.model";
+    public final static String saveModelStage21Undersampling = "model/tunnel_step1.model";
+    public final static String saveModelStage22Undersampling = "model/tunnel_step2.model";
+
+    public final static String saveModelStage21NoUndersampling = "model/cascade_noUS_stage1_nb.model";
+    public final static String saveModelStage22NoUndersampling = "model/cascade_noUS_stage2_nb.model";
+
+    public final static String exportedNaiveBayesWithUndersampling = "exported_models/naive_bayes_undersampling.csv";
+    public final static String exportedNaiveBayesNoUndersampling = "exported_models/naive_bayes_no_undersampling.csv";
+    public final static String exportedCascadeTunnel = "exported_models/cascade_tunnel.csv";
 
     public static final String[] featuresStage1 =
             {"SEVERITY_INDEX", "AGE_GROUP", "SEX", "PNEUMONIA", "COPD", "ASTHMA", "TOBACCO"};
